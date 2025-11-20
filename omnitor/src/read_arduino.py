@@ -24,7 +24,7 @@ save_data_sec = 60 # 데이터 저장하는 초 단위
 read_data_sec = 1 # 데이터 읽는 초 단위
 
 # 다른 파일에서 접근 가능한 최신 데이터 저장소 (Global Variable)
-latest_raw_data = {}
+data_for_calibration = {}
 
 # 이동 평균을 위한 데이터 버퍼 (Deque)
 data_buffer = {
@@ -99,12 +99,13 @@ def update_latest_raw_data(avg_data):
 
     """ 최신 raw 데이터 지역 변수에 업데이트 하는 함수 (보정용) """
 
-    global latest_raw_data # 지역 변수 사용 선언
+    global data_for_calibration # 지역 변수 사용 선언
 
-    latest_raw_data = {
+    data_for_calibration = {
         'ph_raw': avg_data['ph_raw'],
         'ec_raw': avg_data['ec_raw'],
-        'weight_raw': avg_data['weight_raw']
+        'weight_raw': avg_data['weight_raw'],
+        'water_temperature': avg_data['water_temperature'],
     }
 
 
