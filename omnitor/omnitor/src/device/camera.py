@@ -1,14 +1,11 @@
 import os
 import cv2
 from datetime import datetime
-import schedule
 import time
 import json
 
 # --- Directory and Time Settings ---
 BASE_DIR = os.path.expanduser("~/gomojang/omnitor")
-CONFIG_FILE_PATH = os.path.join(BASE_DIR, "camera_config.json")
-DEFAULT_CAPTURE_TIME = "12:00"
 SAVE_DIRECTORY = os.path.join(BASE_DIR, "omnitor/frontend/static/journal_images/")
 
 # --- Settings ---
@@ -59,49 +56,11 @@ def take_picture_job():
         if cap is not None and cap.isOpened():
             cap.release()
 
-def load_capture_time():
-    try:
-        with open(CONFIG_FILE_PATH, 'r') as f:
-            config = json.load(f)
-            time_str = config.get('capture_time', DEFAULT_CAPTURE_TIME)
-            datetime.strptime(time_str, '%H:%M') 
-            return time_str
-    except (FileNotFoundError, json.JSONDecodeError, ValueError):
-        print(f"Config file not found or invalid. Using default time: {DEFAULT_CAPTURE_TIME}")
-        return DEFAULT_CAPTURE_TIME
-    except Exception as e:
-        print(f"Error loading config file: {e}. Using default.")
-        return DEFAULT_CAPTURE_TIME
-
-
-def 
-
 
 
 def main():
-    print("--- 사진 캡처 ---")
-    
-    current_capture_time = load_capture_time()
-    print(f"카메라 스케줄 시간: {current_capture_time}")
-    
-    schedule.every().day.at(current_capture_time).do(take_picture_job).tag('daily-picture')
-    
-    while True:
-        schedule.run_pending()
-        
-        time.sleep(60) 
-        
-        new_capture_time = load_capture_time()
-        
-        if new_capture_time != current_capture_time:
-            print(f"[{datetime.now()}] 캡처 시간이 변경 되었습니다.")
-            print(f"스케줄을 업데이트 합니다: {current_capture_time} -> {new_capture_time}")
-            
-            schedule.clear('daily-picture')
-            
-            schedule.every().day.at(new_capture_time).do(take_picture_job).tag('daily-picture')
-            
-            current_capture_time = new_capture_time
+    take_picture_job()
 
+    
 if __name__ == "__main__":
     main()
