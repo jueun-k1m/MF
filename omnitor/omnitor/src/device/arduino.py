@@ -98,7 +98,7 @@ def update_latest_raw_data(avg_data):
 
     try:
         SensorCalibration.objects.update_or_create(
-            id=1,
+            id=2,
             defaults={
                 'ph_raw': avg_data['ph_raw'],
                 'ec_raw': avg_data['ec_raw'],
