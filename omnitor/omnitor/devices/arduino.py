@@ -21,6 +21,7 @@ class DataPacket:
   ph_voltage: float
   ec_voltage: float
   water_temperature: float
+  tip_count: float
 
 @dataclass
 class CommandPacket:
@@ -45,7 +46,7 @@ class ArduinoSerial:
     def find_port(self):
         ports = serial.tools.list_ports.comports()
         for port in ports:
-            if "Arduino" in port.description or "ttyACM" in port.device:
+            if "Arduino" in port.description:
                 return port.device
         return None
 
@@ -64,7 +65,7 @@ class ArduinoSerial:
             print(f"[Arduino] 연결 실패: {e}")
             return False
 
-    def _read_loop(self):
+    def read_loop(self):
         buffer = []
         while self.running:
             try:
@@ -77,14 +78,14 @@ class ArduinoSerial:
                       if payload is None:
                           break
                       with self.lock :
-                        self.current_data = payload
+                        self.current_data = self.parse_packet(payload)
                 else:
                   time.sleep(0.01)
             except Exception as e:
                 print(f"[Arduino] Write 오류: {e}")
                 self._reconnect()
 
-    def _write_loop(self):
+    def write_loop(self):
         while self.running:
             try:
                 msg = self.write_queue.get()
@@ -115,8 +116,8 @@ class ArduinoSerial:
 
         self.running = True
 
-        self.read_thread = threading.Thread(target=self._read_loop, daemon=True)
-        self.write_thread = threading.Thread(target=self._write_loop, daemon=True)
+        self.read_thread = threading.Thread(target=self.read_loop, daemon=True)
+        self.write_thread = threading.Thread(target=self.write_loop, daemon=True)
 
         self.read_thread.start()
         self.write_thread.start()
@@ -133,7 +134,7 @@ class ArduinoSerial:
             self.ser.close()
         print("[Arduino] 종료됨")
 
-    def extract_packet(buffer: bytearray):
+    def extract_packet(self,buffer: bytearray):
       # 최소 헤더(2) + length(1) + CRC(2)
       if len(buffer) < 5:
           return None
@@ -161,7 +162,7 @@ class ArduinoSerial:
       payload = packet[3:3+length]
       recv_crc = packet[3+length] | (packet[4+length-1] << 8)
 
-      calc_crc = crc16_modbus(packet[:3] + payload)
+      calc_crc = self.crc16_modbus(packet[:3] + payload)
 
       if recv_crc != calc_crc:
           print("[Parse] CRC mismatch")
@@ -169,8 +170,8 @@ class ArduinoSerial:
 
       return payload
 
-    def parse_packet(packet: bytes) -> DataPacket:
-      floats = struct.unpack("<8f", packet)  # little endian
+    def parse_packet(self, packet: bytes) -> DataPacket:
+      floats = struct.unpack("<9f", packet)  # little endian
       return DataPacket(*floats)
     
     def crc16_modbus(data: bytes) -> int:
@@ -185,7 +186,7 @@ class ArduinoSerial:
                   crc >>= 1
       return crc
       
-    def encode_command_packet(packet: CommandPacket) -> bytes:
+    def encode_command_packet(packet: CommandPacket, self) -> bytes:
       PACKET_HEADER_1 = 0xAA
       PACKET_HEADER_2 = 0x55
 
@@ -197,7 +198,7 @@ class ArduinoSerial:
       header = bytes([PACKET_HEADER_1, PACKET_HEADER_2, length])
 
       crc_input = header + payload
-      crc = crc16_modbus(crc_input)
+      crc = self.crc16_modbus(crc_input)
 
       crc_bytes = bytes([crc & 0xFF, (crc >> 8) & 0xFF])
 
