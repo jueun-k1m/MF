@@ -1,7 +1,7 @@
 # views.py
 import json
 from django.http import JsonResponse, HttpResponseBadRequest, HttpResponseNotFound, HttpResponseNotAllowed
-from .models import FinalData
+from models import FinalData
 
 def dashboard_data_api(request):
     """
