@@ -5,12 +5,13 @@ import datetime
 # 농장 일지 모델
 class FarmJournal(models.Model):
     date = models.DateField(primary_key=True)
-    farm_work = models.TextField(blank=True, null=True)
+    work = models.TextField(blank=True, null=True)
     pesticide = models.TextField(blank=True, null=True)
     fertilizer = models.TextField(blank=True, null=True)
     harvest = models.TextField(blank=True, null=True)
     notes = models.TextField(blank=True, null=True)
-    camtime = models.TimeField(default=datetime.time(00, 00))
+    cam_time = models.TimeField(default=datetime.time(00, 00))
+    image_dir = models.TextField(default="/static/journal_images/")
 
     def __str__(self):
         return f"농장 일지: {self.date}"
@@ -27,19 +28,19 @@ class RawData(models.Model):
     # 환경 센서
     air_temperature = models.FloatField(null=True, blank=True)
     air_humidity = models.FloatField(null=True, blank=True)
-    co2 = models.FloatField(null=True, blank=True)
+    co2 = models.IntegerField(null=True, blank=True)
     insolation = models.FloatField(null=True, blank=True)
     
     # 배액 센서
-    water_temperature = models.FloatField(null=True, blank=True)
-    ph_raw = models.FloatField(null=True, blank=True)
-    ec_raw = models.FloatField(null=True, blank=True)
+    water_temperature = models.BigIntegerField(null=True, blank=True)
+    ph = models.FloatField(null=True, blank=True)
+    ec = models.FloatField(null=True, blank=True)
 
     # 로드셀
-    weight_raw = models.FloatField(null=True, blank=True)
+    weight = models.FloatField(null=True, blank=True)
 
     #티핑 게이지
-    tip_count = models.FloatField(null=True, blank=True)
+    tip_count = models.IntegerField(null=True, blank=True)
     
     # 토양 센서
     soil_temperature = models.FloatField(null=True, blank=True)
@@ -64,11 +65,14 @@ class FinalData(models.Model):
     
     # 배액 센서
     water_temperature = models.FloatField(null=True, blank=True)
-    ph_final = models.FloatField(null=True, blank=True)
-    ec_final = models.FloatField(null=True, blank=True)
+    ph = models.FloatField(null=True, blank=True)
+    ec = models.FloatField(null=True, blank=True)
 
     # 로드셀
-    weight_final= models.FloatField(null=True, blank=True)
+    weight= models.FloatField(null=True, blank=True)
+
+    # 티핑 게이지
+    tip_total = models.IntegerField(null=True, blank=True)
     
     # 토양 센서
     soil_temperature = models.FloatField(null=True, blank=True)
@@ -81,33 +85,61 @@ class FinalData(models.Model):
 
 
 class CalibrationSettings(models.Model):
-    id = models.IntegerField(primary_key=True, default=1, editable=False)
+
+    """
+    무게, ph, ec 보정 설정 (slope, intercept)
+    y = mx + b 식으로 보정 설정 적용
+    """
+
+    timestamp = models.DateTimeField(auto_now_add=True)
 
     # 무게 보정
-    weight_filtered1 = models.FloatField(default=0)
-    weight_filtered2 = models.FloatField(default=0)
-    weight_real1 = models.FloatField(default=0)
-    weight_real2 = models.FloatField(default=0)
     weight_slope = models.FloatField(default=0)
     weight_intercept = models.FloatField(default=0)
     
     # pH 보정
-    ph_filtered1 = models.FloatField(default=0)
-    ph_filtered2 = models.FloatField(default=7.0)
-    ph_real1 = models.FloatField(default=0)
-    ph_real2 = models.FloatField(default=4.0)
     ph_slope = models.FloatField(default=0)
     ph_intercept = models.FloatField(default=0)
 
     # EC 보정
-    ec_filtered1 = models.FloatField(default=0)
-    ec_filtered2 = models.FloatField(default=0)
-    ec_real1 = models.FloatField(default=0)
-    ec_real2 = models.FloatField(default=0)
     ec_slope = models.FloatField(default=0)
     ec_intercept = models.FloatField(default=0)
 
     def __str__(self):
         return "보정 설정"
     
+    
+class CalibrationData(models.Model):
+
+    """
+    보정 설정에서 사용한 실제 값과 raw -> 필터링 된 값 데이터 모델
+    (데이터 보관용)
+    """
+
+
+    timestamp=models.DateTimeField(auto_now_add=True)
+
+    weight_real1=models.FloatField(default=0)
+    weight_real2=models.FloatField(default=0)
+    weight_filtered1=models.FloatField(default=0)
+    weight_filtered2=models.FloatField(default=0)
+
+    ph_real1=models.FloatField(default=0)
+    ph_real2=models.FloatField(default=0)
+    ph_filtered1=models.FloatField(default=0)
+    ph_filtered2=models.FloatField(default=0)
+    ph_water_temperature1=models.FloatField(default=0)
+    ph_water_temperature2=models.FloatField(default=0)
+
+    ec_real1=models.FloatField(default=0)
+    ec_real2=models.FloatField(default=0)
+
+    ec_filtered1=models.FloatField(default=0)
+    ec_filtered2=models.FloatField(default=0)
+
+    ec_water_temperature1=models.FloatField(default=0)
+    ec_water_temperature2=models.FloatField(default=0)
+
+    def __str__(self):
+        return "실제 값"
     
