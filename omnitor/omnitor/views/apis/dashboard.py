@@ -3,7 +3,7 @@ import json
 from django.http import JsonResponse, HttpResponseBadRequest, HttpResponseNotFound, HttpResponseNotAllowed
 from models import FinalData
 
-def dashboard_data_api(request):
+def dashboard_api(request):
     """
     [API] 대시보드 데이터 조회
     """
