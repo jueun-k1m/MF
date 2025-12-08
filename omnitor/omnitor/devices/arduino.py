@@ -186,7 +186,7 @@ class ArduinoSerial:
                   crc >>= 1
       return crc
       
-    def encode_command_packet(packet: CommandPacket, self) -> bytes:
+    def encode_command_packet(self, packet: CommandPacket) -> bytes:
       PACKET_HEADER_1 = 0xAA
       PACKET_HEADER_2 = 0x55
 
