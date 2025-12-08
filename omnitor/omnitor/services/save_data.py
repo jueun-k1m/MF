@@ -18,6 +18,9 @@ from devices.arduino import SerialSingleton
 from devices.soil import SoilSensorSingleton
 from filter import maf_all
 
+tip_capacity = 5
+
+
 def save_data_loop():
 
     """
@@ -79,7 +82,7 @@ def save_data_loop():
                             ec_slope = 1; ec_intercept = 0
                         
                         cal_settings = DefaultSettings()
-
+                        
                     FinalData.objects.create(
                         timestamp=raw_data.timestamp,
                         air_temperature=filtered_data['air_temperature'],
@@ -92,6 +95,7 @@ def save_data_loop():
                         ph=(cal_settings.ph_slope * filtered_data['ph']) + cal_settings.ph_intercept,
                         ec=(cal_settings.ec_slope * filtered_data['ec']) + cal_settings.ec_intercept,
 
+                        tip_total=raw_data.tip_count * tip_capacity,
                         soil_temperature=filtered_data['soil_temperature'],
                         soil_humidity=filtered_data['soil_humidity'],
                         soil_ec=filtered_data['soil_ec'],
