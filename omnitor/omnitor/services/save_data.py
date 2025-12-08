@@ -73,6 +73,12 @@ def save_data_loop():
 
                     if not cal_settings:
                         print("보정 설정이 없습니다..")
+                        class DefaultSettings:
+                            weight_slope = 1; weight_intercept = 0
+                            ph_slope = 1; ph_intercept = 0
+                            ec_slope = 1; ec_intercept = 0
+                        
+                        cal_settings = DefaultSettings()
 
                     FinalData.objects.create(
                         timestamp=raw_data.timestamp,
