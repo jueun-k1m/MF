@@ -2,32 +2,31 @@ import os
 import json
 from datetime import datetime, date
 from django.http import JsonResponse, HttpResponseBadRequest, HttpResponseNotAllowed, HttpResponse
-from django.views.decorators.csrf import csrf_exempt
 from django.templatetags.static import static 
 from models import FarmJournal
 
-@csrf_exempt
 def journal_api(request):
+
     """
     [API] 농장 일지 내용 조회 / 입력 저장
     
     """
 
-    # ===== GET: 날짜별 일지 & 사진 조회 ========
+    # ======== GET: 날짜별 일지 & 사진 조회 ========
     if request.method == 'GET':
+        # 날짜를 받고
         date_str = request.GET.get('date')
 
         try:
             if date_str:
-                target_date = datetime.strptime(date_str, '%Y-%m-%d').date()
+                target_date = datetime.strptime(date_str, '%Y-%m-%d').date() # 문자열을 날짜 객체로 변환
             else:
-                target_date = date.today()
+                target_date = date.today() # 기본값: 오늘 날짜
 
-            # DB 조회
-            journal = FarmJournal.objects.filter(date=target_date).first()
+            # DB 조회 (마지막 입력)
+            journal = FarmJournal.objects.filter(date=target_date).last()
 
             if journal:
-                # 기본 응답 구조
                 data = {
                     'date': journal.date.strftime('%Y-%m-%d'),
                     'work': journal.work,
@@ -35,17 +34,18 @@ def journal_api(request):
                     'fertilizer': journal.fertilizer,
                     'harvest': journal.harvest,
                     'notes': journal.notes,
-                    'image_dir': None,   
-                    'cam_time': None   
+                    'image_dir': journal.image_dir,
+                    'cam_time': journal.cam_time.strftime('%H:%M')   
                 }
 
-                # 이미지 URL 처리
-                if journal.image_dir:
-                    data['image_dir'] = journal.image_dir
-
-                # 촬영 시간 처리
-                if journal.cam_time:
-                    data['cam_time'] = journal.cam_time.strftime('%H:%M')
+                # 이미지 파일 경로 설정 및 URL 생성
+                journal_image_path = os.path.join('media', journal.image_dir) if journal.image_dir else None
+                if journal_image_path and os.path.exists(journal_image_path):
+                    image_urls = []
+                    for img_file in os.listdir(journal_image_path):
+                        if img_file.lower().endswith(('.png', '.jpg', '.jpeg', '.gif')):
+                            image_urls.append(static(os.path.join(journal.image_dir, img_file)))
+                    data['images'] = image_urls
 
                 return JsonResponse({
                     'status': 'success',
@@ -62,7 +62,7 @@ def journal_api(request):
                 })
 
         except ValueError:
-            return HttpResponseBadRequest("Invalid date format (YYYY-MM-DD)")
+            return HttpResponseBadRequest("날짜 오류: 올바른 형식은 YYYY-MM-DD 입니다.")
 
 
     # ====== POST: 농장 일지 저장 =========
@@ -72,11 +72,11 @@ def journal_api(request):
             date_str = data.get('date')
 
             if not date_str:
-                return HttpResponseBadRequest("Date is required.")
+                return HttpResponseBadRequest("날짜를 선택해 주세요.")
             
             target_date = datetime.strptime(date_str, '%Y-%m-%d').date()
 
-            journal, created = FarmJournal.objects.update_or_create(
+            journal = FarmJournal.objects.update_or_create(
                 date=target_date,
                 defaults={
                     'work': data.get('work', ''),
@@ -87,7 +87,7 @@ def journal_api(request):
                 }
             )
 
-            return JsonResponse({'status': 'success', 'message': 'Saved successfully'})
+            return JsonResponse({'status': 'success', 'message': '일지가 저장되었습니다.'})
 
         except Exception as e:
             return JsonResponse({'status': 'error', 'message': str(e)}, status=500)
