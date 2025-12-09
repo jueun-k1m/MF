@@ -103,7 +103,7 @@ def save_data_loop():
                     )
             else:
                 print("센서 대기 중..")
-            time.sleep(1)
+            time.sleep(0.1)
         except KeyboardInterrupt:
             print("프로그램 종료")
             break
