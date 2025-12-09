@@ -41,11 +41,13 @@ def save_data_loop():
     while True:
         try:
             close_old_connections()
-
+            
             arduino_data = arduino.get_current_data()
             soil_data = soil.get_current_data()
 
             if arduino_data and soil_data:
+                start_time = time.time()
+                
                 now = datetime.now()
 
                 raw_data = RawData.objects.create(
@@ -101,6 +103,10 @@ def save_data_loop():
                         soil_ec=filtered_data['soil_ec'],
                         soil_ph=filtered_data['soil_ph']
                     )
+                end_time = time.time()
+                elapsed_time = end_time - start_time
+                
+                print(f"소요 시간: {elapsed_time:.4f}초")
             else:
                 print("센서 대기 중..")
             time.sleep(0.1)
