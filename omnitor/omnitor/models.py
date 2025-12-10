@@ -49,7 +49,7 @@ class RawData(models.Model):
     soil_ph = models.FloatField(null=True, blank=True)
 
     def __str__(self):
-        return f"데이터: {self.timestamp.strftime('%Y-%m-%d %H:%M:%S')}"
+        return f"Raw 데이터: {self.timestamp.strftime('%Y-%m-%d %H:%M:%S')}"
 
 class FinalData(models.Model):
 
@@ -57,22 +57,25 @@ class FinalData(models.Model):
 
     timestamp = models.DateTimeField(auto_now_add=True)
     
-    # 환경 센서
+    # 환경
     air_temperature = models.FloatField(null=True, blank=True)
     air_humidity = models.FloatField(null=True, blank=True)
+    vpd = models.FloatField(null=True, blank=True)
+
     co2 = models.FloatField(null=True, blank=True)
     insolation = models.FloatField(null=True, blank=True)
-    
-    # 배액 센서
+    total_insolation = models.FloatField(null=True, blank=True)
+
+    # 배액
     water_temperature = models.FloatField(null=True, blank=True)
     ph = models.FloatField(null=True, blank=True)
     ec = models.FloatField(null=True, blank=True)
 
-    # 로드셀
-    weight= models.FloatField(null=True, blank=True)
-
-    # 티핑 게이지
-    tip_total = models.IntegerField(null=True, blank=True)
+    # 함수량
+    total_weight  = models.FloatField(null=True, blank=True)
+    irrigation = models.FloatField(null=True, blank=True)
+    total_irrigation = models.FloatField(null=True, blank=True)
+    total_drainage = models.IntegerField(null=True, blank=True)
     
     # 토양 센서
     soil_temperature = models.FloatField(null=True, blank=True)
@@ -81,7 +84,7 @@ class FinalData(models.Model):
     soil_ph = models.FloatField(null=True, blank=True)
 
     def __str__(self):
-        return f"최신 센서 raw 데이터: {self.timestamp.strftime('%Y-%m-%d %H:%M:%S')}"
+        return f"Final 데이터: {self.timestamp.strftime('%Y-%m-%d %H:%M:%S')}"
 
 
 class CalibrationSettings(models.Model):
