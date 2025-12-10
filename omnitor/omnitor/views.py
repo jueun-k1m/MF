@@ -4,7 +4,6 @@ from django.utils import timezone
 from datetime import datetime, timedelta
 from django.conf import settings as django_settings
 from django.contrib.staticfiles.storage import staticfiles_storage
-from models import SensorData, CalibrationSettings, FarmJournal
 import json
 import time
 import statistics
