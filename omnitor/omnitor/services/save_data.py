@@ -1,7 +1,9 @@
+# gemini
+
 import os
 import sys
 import time
-import threading  # [핵심] 스레딩 모듈 추가
+import threading
 import django
 from datetime import datetime
 
@@ -25,11 +27,11 @@ from omnitor.omnitor.services.filtering import maf_all
 prev_weight = 0
 tip_capacity = 5
 
-def run_rawdata_loop():
+def save_rawdata_loop():
+
     """
     [Thread 1] 0.1초마다 센서 데이터를 읽어 RawData에 저장
     """
-    print(">>> RawData 수집 스레드 시작 (0.1s)")
     
     # 싱글톤 인스턴스 가져오기
     arduino = SerialSingleton.instance()
@@ -43,7 +45,7 @@ def run_rawdata_loop():
 
     while True:
         try:
-            # [중요] 스레드 환경에서 DB 연결 끊김 방지
+            # 스레드 환경에서 DB 연결 끊김 방지
             close_old_connections()
             
             arduino_data = arduino.get_current_data()
@@ -69,35 +71,33 @@ def run_rawdata_loop():
                     soil_ec=soil_data.soil_ec,
                     soil_ph=soil_data.soil_ph
                 )
-            # else:
-            #     print("센서 데이터 대기 중...") # 로그 너무 많이 찍히면 주석 처리
-
+            
             time.sleep(0.1)
 
         except Exception as e:
             print(f"[RawData Error] {e}")
             time.sleep(1)
 
-def run_finaldata_loop():
+def save_finaldata_loop():
+
     """
     [Thread 2] 57초마다 RawData를 가공하여 FinalData에 저장
     """
-    print(">>> FinalData 저장 스레드 시작 (57s)")
     
     global prev_weight # 전역 변수 사용 명시
 
     while True:
         try:
-            # [중요] DB 연결 리셋 (필수)
+            # DB 연결 리셋
             close_old_connections()
             
-            # 57초 대기 (먼저 쉬고 실행할지, 실행하고 쉴지는 선택)
+            # 57초 대기
             time.sleep(57) 
             
             now = timezone.now()
             today_start = now.replace(hour=0, minute=0, second=0, microsecond=0)
 
-            # 이동평균 필터 적용 데이터 가져오기
+            # 이동평균 필터 적용 데이터 가져오기 (DB RawData last 가져와서 -> 이평필 적용 -> 반환)
             filtered_data = maf_all()
             
             # RawData에서 tip_count 같은 누적값 가져오기 위해 최신값 조회
@@ -189,11 +189,11 @@ if __name__ == '__main__':
     # 메인 실행부
     
     # 스레드 1: RawData 수집 (0.1초)
-    t1 = threading.Thread(target=run_rawdata_loop)
+    t1 = threading.Thread(target=save_rawdata_loop)
     t1.daemon = True # 메인 프로그램 종료 시 같이 종료되도록 설정
     
     # 스레드 2: FinalData 저장 (57초)
-    t2 = threading.Thread(target=run_finaldata_loop)
+    t2 = threading.Thread(target=save_finaldata_loop)
     t2.daemon = True
 
     # 스레드 시작
