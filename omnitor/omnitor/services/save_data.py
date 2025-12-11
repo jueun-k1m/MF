@@ -1,5 +1,3 @@
-# gemini
-
 import os
 import sys
 import time
@@ -14,7 +12,7 @@ sys.path.append(root_dir)
 os.environ.setdefault("DJANGO_SETTINGS_MODULE", "omnitor.settings")
 django.setup()
 
-from omnitor.models import RawData, CalibrationSettings, FinalData
+from models import RawData, CalibrationSettings, FinalData
 from django.db import connection, close_old_connections
 from django.db.models import Sum
 from django.utils import timezone
@@ -108,7 +106,7 @@ def save_finaldata_loop():
                 continue
 
             if filtered_data:
-                # 1. VPD 계산 (오타 수정: 0.6(...) -> 수식 교정)
+                # ======= VPD 계산 ======
                 temp = filtered_data['air_temperature']
                 hum = filtered_data['air_humidity']
                 
@@ -118,7 +116,7 @@ def save_finaldata_loop():
                 
                 vpd = ((0.6107 * 10 ** (7.5 * temp / (237.3 + temp))) * (1 - (hum / 100)))
 
-                # 2. 관수량 계산
+                # ======= 관수량 계산 =======
                 current_weight = filtered_data['weight']
                 irrigation = 0
                 
@@ -126,19 +124,18 @@ def save_finaldata_loop():
                 if prev_weight > 0 and current_weight > prev_weight:
                      irrigation = current_weight - prev_weight
                 
-                # 3. 보정 설정 로드
+                # ======= 보정 설정 로드 =======
                 cal_settings = CalibrationSettings.objects.last()
                 if not cal_settings:
-                    # 임시 클래스 생성보다 딕셔너리나 기본값 처리가 안전
+                    # 기본값 처리
                     cal_settings = type('obj', (object,), {
                         'weight_slope': 1, 'weight_intercept': 0,
                         'ph_slope': 1, 'ph_intercept': 0,
                         'ec_slope': 1, 'ec_intercept': 0
                     })
 
-                # 4. 누적값 계산 (aggregate 결과는 딕셔너리입니다!)
-                # 주의: 지금 막 생성하려는 데이터는 DB에 없으므로 합계에 포함 안 됨.
-                # 과거 데이터 합 + 현재 값으로 계산해야 정확함.
+                # ======= 누적값 계산 =======
+                # 과거 데이터 합 + 현재 값으로 계산
                 agg_result = FinalData.objects.filter(timestamp__gte=today_start).aggregate(
                     sum_insol=Sum('insolation'),
                     sum_irrig=Sum('irrigation')
@@ -148,7 +145,7 @@ def save_finaldata_loop():
                 total_insolation = (agg_result['sum_insol'] or 0) + filtered_data['insolation']
                 total_irrigation = (agg_result['sum_irrig'] or 0) + irrigation
 
-                # 5. FinalData 저장
+                # ======= FinalData 저장 =======
                 FinalData.objects.create(
                     timestamp=now,
                     
@@ -166,10 +163,12 @@ def save_finaldata_loop():
                     total_irrigation=total_irrigation,
                     total_drainage=raw_latest.tip_count * tip_capacity,
 
-                    # 배액/토양
+                    # 배액
                     water_temperature=filtered_data['water_temperature'],
                     ph=(cal_settings.ph_slope * filtered_data['ph']) + cal_settings.ph_intercept,
                     ec=(cal_settings.ec_slope * filtered_data['ec']) + cal_settings.ec_intercept,
+
+                    # 토양
                     soil_temperature=filtered_data['soil_temperature'],
                     soil_humidity=filtered_data['soil_humidity'],
                     soil_ec=filtered_data['soil_ec'],
