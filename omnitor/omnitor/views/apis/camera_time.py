@@ -1,5 +1,3 @@
-# gemini
-
 import json
 from django.http import JsonResponse, HttpResponseBadRequest, HttpResponse
 from datetime import datetime
