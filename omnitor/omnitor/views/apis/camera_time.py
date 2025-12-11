@@ -1,18 +1,13 @@
+# gemini
+
 import json
 from django.http import JsonResponse, HttpResponseBadRequest, HttpResponse
-from django.views.decorators.csrf import csrf_exempt
 from datetime import datetime
 from models import FarmJournal
 
 def camera_time_api(request):
-
-    """
-    [API] 카메라 촬영 시간 설정 조회 / 업데이트
     
-    :param request: Description
-    """
-    
-    # ======= GET: 설정된 시간 조회 =======
+    # === GET 요청: 설정된 시간 조회 ===
     if request.method == 'GET':
         journal = FarmJournal.objects.last() # [중요] 인스턴스 가져오기
         
@@ -21,7 +16,7 @@ def camera_time_api(request):
             
         return JsonResponse({'status': 'success', 'capture_time': journal.cam_time})
 
-    # ======= POST: 시간 설정 업데이트 =======
+    # === POST 요청: 시간 설정 업데이트 ===
     elif request.method == 'POST':
         try:
             data = json.loads(request.body)
@@ -33,7 +28,7 @@ def camera_time_api(request):
             # 시간 형식 검증
             valid_time = datetime.strptime(new_time_str, '%H:%M').time()
 
-            # DB에서 마지막 일지 인스턴스 가져오기
+            # DB 업데이트
             journal = FarmJournal.objects.last()
             
             # 만약 DB가 비어있다면 새로 생성
