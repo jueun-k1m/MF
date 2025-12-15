@@ -12,43 +12,26 @@ sys.path.append(root_dir)
 os.environ.setdefault("DJANGO_SETTINGS_MODULE", "omnitor.settings")
 django.setup()
 
-from models import RawData, CalibrationSettings, FinalData
+from django.omnitor.omnitor.models.models import RawData, CalibrationSettings, FinalData
 from django.db import connection, close_old_connections
 from django.db.models import Sum
 from django.utils import timezone
 
-from devices.arduino import SerialSingleton
-from devices.soil import SoilSensorSingleton
-from omnitor.omnitor.services.filtering import maf_all
+
+from .filtering import maf_all
 
 # 전역 변수
 prev_weight = 0
 tip_capacity = 5
 
-def save_rawdata_loop():
+def save_rawdata(arduino_data, soil_data):
 
     """
-    [Thread 1] 0.1초마다 센서 데이터를 읽어 RawData에 저장
+    [Thread 1] 센서 데이터를 읽어 RawData에 저장
     """
     
-    # 싱글톤 인스턴스 가져오기
-    arduino = SerialSingleton.instance()
-    soil = SoilSensorSingleton.instance()
-
-    # 포트가 안 열려있으면 열기
-    if not arduino.ser or not arduino.ser.is_open:
-        arduino.start()
-    # soil 센서는 start() 구현 여부에 따라 호출 (일반적으로 필요)
-    # soil.start() 
-
     while True:
         try:
-            # 스레드 환경에서 DB 연결 끊김 방지
-            close_old_connections()
-            
-            arduino_data = arduino.get_current_data()
-            soil_data = soil.get_current_data()
-
             if arduino_data and soil_data:
                 now = datetime.now()
                 
@@ -70,16 +53,14 @@ def save_rawdata_loop():
                     soil_ph=soil_data.soil_ph
                 )
             
-            time.sleep(0.1)
-
         except Exception as e:
             print(f"[RawData Error] {e}")
             time.sleep(1)
 
-def save_finaldata_loop():
+def save_finaldata():
 
     """
-    [Thread 2] 57초마다 RawData를 가공하여 FinalData에 저장
+    [Thread 2] RawData를 가공하여 FinalData에 저장
     """
     
     global prev_weight # 전역 변수 사용 명시
@@ -87,10 +68,7 @@ def save_finaldata_loop():
     while True:
         try:
             # DB 연결 리셋
-            close_old_connections()
-            
-            # 57초 대기
-            time.sleep(57) 
+            close_old_connections() 
             
             now = timezone.now()
             today_start = now.replace(hour=0, minute=0, second=0, microsecond=0)
@@ -183,25 +161,3 @@ def save_finaldata_loop():
         except Exception as e:
             print(f"[FinalData Error] {e}")
             # 에러 나도 루프는 계속 돌게 둠
-
-if __name__ == '__main__':
-    # 메인 실행부
-    
-    # 스레드 1: RawData 수집 (0.1초)
-    t1 = threading.Thread(target=save_rawdata_loop)
-    t1.daemon = True # 메인 프로그램 종료 시 같이 종료되도록 설정
-    
-    # 스레드 2: FinalData 저장 (57초)
-    t2 = threading.Thread(target=save_finaldata_loop)
-    t2.daemon = True
-
-    # 스레드 시작
-    t1.start()
-    t2.start()
-
-    # 메인 스레드가 바로 종료되지 않도록 대기
-    try:
-        while True:
-            time.sleep(1)
-    except KeyboardInterrupt:
-        print("프로그램을 종료합니다.")
