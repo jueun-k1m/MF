@@ -1,6 +1,8 @@
+# gemini
+
 import json
 from django.http import JsonResponse
-from models import FinalData  # 모델 경로 확인 필요
+from django.omnitor.omnitor.models.models import FinalData  # 모델 경로 확인 필요
 
 def dashboard_api(request):
     
