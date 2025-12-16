@@ -1,0 +1,214 @@
+#include <Wire.h>
+#include <BH1750.h>
+#include <DHT.h>
+#include <OneWire.h>
+#include <DS18B20.h>
+
+// --- sensor settings ---
+
+// Temp, humidity
+#define DHTPIN 7
+#define DHTTYPE DHT22
+DHT dht(DHTPIN, DHTTYPE);
+
+// CO2
+byte cmd[9] = { 0xFF, 0x01, 0x86, 0x00, 0x00, 0x00, 0x00, 0x00, 0x79 };
+byte response[9];
+
+// Weight
+#define DOUT 14
+#define SCK 15
+
+BH1750 lightMeter;
+bool bh1750_active = false;
+
+// EC
+#define ECpin A2
+
+// pH
+#define PHpin A1
+
+// Water temp
+DS18B20 DS18B20_Sensor(4);
+
+// Reed switch
+#define REEDswitch 10
+int pastStat = 0;
+int count = 0;
+
+// --- setup ---
+void setup() {
+  Serial.begin(9600);
+  while (!Serial) {
+    delay(10);
+  }
+
+  Serial1.begin(9600);      // CO2
+  dht.begin();              // Temp & Humidity
+  Wire.begin();             // Light
+  if (lightMeter.begin(BH1750::CONTINUOUS_HIGH_RES_MODE)) {
+    bh1750_active = true;
+    // Serial.println("BH1750 Connected"); 
+  } else {
+    bh1750_active = false;
+    // Serial.println("BH1750 NOT Found"); 
+  }
+  pinMode(SCK, OUTPUT);     // HX711
+  pinMode(DOUT, INPUT);     // HX711
+  pinMode(ECpin, INPUT);    // EC
+  pinMode(PHpin, INPUT);    // pH raw
+  pinMode(REEDswitch, INPUT_PULLUP);  // Reed switch
+
+  //Serial.println("Initialization done!!!");
+}
+
+void loop() {
+  get_data();
+  delay(100);  
+}
+
+
+void get_data()
+{
+  // --- 변수 초기화 (기본값 0) ---
+  int co2_ppm = 0;
+  float temperature = 0;
+  float humidity = 0;
+  float insolation = 0;
+  long raw_weight = 0;
+  float PH_voltage = 0;
+  float EC_voltage = 0;
+  float water_temp = 0;
+
+  // 1. CO2 측정 시도
+  Serial1.write(cmd, 9);
+  delay(50); // 데이터 수신 대기 (중요)
+
+  if (Serial1.available() >= 9) {
+    Serial1.readBytes(response, 9);
+    if (response[0] == 0xFF && response[1] == 0x86) {
+      byte checksum = calculateChecksum(response);
+      if (response[8] == checksum) {
+        co2_ppm = response[2] * 256 + response[3];
+      }
+    }
+  } else {
+    // 버퍼 비우기 (찌꺼기 데이터 방지)
+    while (Serial1.available()) Serial1.read();
+  }
+
+  // 2. 온습도 (DHT) 측정
+  float t = dht.readTemperature();
+  float h = dht.readHumidity();
+  
+  // 값을 읽지 못했을 경우(NaN) 0으로 처리
+  if (!isnan(t)) temperature = t;
+  if (!isnan(h)) humidity = h;
+
+  // 3. 조도 및 일사량 측정 [수정: 안전 모드]
+  float lux = 0;
+  if (bh1750_active) {
+    lux = lightMeter.readLightLevel();
+    // 가끔 센서 에러로 음수나 말도 안 되는 큰 값이 나오면 0 처리
+    if (lux < 0 || lux > 65535) {
+        lux = 0;
+        // 에러가 지속되면 센서 비활성화 시키는 로직을 넣을 수도 있음
+    }
+  } else {
+    // 연결 안 되어 있으면 0 (강제 시도 하지 않음)
+    lux = 0; 
+  }
+  insolation = ((lux / 54.0) * (1.0 / 4.57));
+  // 4. 무게 측정 (타임아웃 적용된 함수 호출)
+  raw_weight = readRaw();
+
+  // 5. EC, pH 측정
+  float raw_EC = analogRead(ECpin);
+  EC_voltage = raw_EC * (5.0 / 1023.0);
+
+  float raw_PH = analogRead(PHpin);
+  PH_voltage = raw_PH * (5.0 / 1023.0);
+
+  // 6. 수온 측정
+  float wt = DS18B20_Sensor.getTempC();
+  // 센서가 연결 안되면 보통 -127.0이 나옴
+  if (wt > -100.0) { 
+    water_temp = wt;
+  } else {
+    water_temp = 0;
+  }
+
+  // 7. 리드 스위치 (카운트)
+  int curStat = digitalRead(REEDswitch);
+  if (pastStat != curStat) {
+    count++;
+  }
+  pastStat = curStat;
+
+  // --- 출력 ---
+  Serial.print(temperature);
+  Serial.print(",");
+  Serial.print(humidity);
+  Serial.print(",");
+  Serial.print(co2_ppm);
+  Serial.print(",");
+  Serial.print(insolation);
+  Serial.print(",");
+  Serial.print(raw_weight);
+  Serial.print(",");
+  Serial.print(PH_voltage);
+  Serial.print(",");
+  Serial.print(EC_voltage);
+  Serial.print(",");
+  Serial.print(water_temp);
+  Serial.print(",");
+  Serial.println(count);
+}
+
+// CO2 checksum
+byte calculateChecksum(byte *packet) {
+  byte checksum = 0;
+  for (int i = 1; i < 8; i++) {
+    checksum += packet[i];
+  }
+  checksum = 0xFF - checksum;
+  checksum += 1;
+  return checksum;
+}
+
+// read raw scale (타임아웃 기능 추가)
+long readRaw() {
+  // 센서가 준비될 때까지 기다리되, 50ms 이상 걸리면 0 반환 (무한 루프 방지)
+  unsigned long startTime = millis();
+  while (digitalRead(DOUT) == HIGH) {
+    if (millis() - startTime > 50) {
+      return 0; // 센서 연결 안됨 혹은 고장
+    }
+  }
+
+  long value = 0;
+  for (int i = 0; i < 24; i++) {
+    digitalWrite(SCK, HIGH);
+    value = value << 1;
+    digitalWrite(SCK, LOW);
+    if (digitalRead(DOUT) == HIGH) {
+      value++;
+    }
+  }
+  
+  // 추가 펄스 (Gain 설정)
+  for (int i = 0; i < 1; i++) { // HX711 라이브러리 표준에 맞춰 1로 수정 권장하나 기존 3 유지 시 3
+    digitalWrite(SCK, HIGH);
+    digitalWrite(SCK, LOW);
+  }
+  // 기존 코드에 3번 펄스가 있어서 3으로 유지합니다. (보통 1, 2, 3 중 하나임)
+  for (int i = 0; i < 2; i++) { 
+    digitalWrite(SCK, HIGH);
+    digitalWrite(SCK, LOW);
+  }
+
+  if (value & 0x800000) {
+    value |= 0xFF000000;
+  }
+  return value;
+}
