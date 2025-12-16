@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Gomojang{% endblock %}</title> <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+
+    <style>
+        body {
+            font-size: .875rem;
+            background-color: #f5f7f9; /* 연한 회색 배경 */
+        }
+        /* 사이드바 스타일 */
+        .sidebar {
+            position: fixed;
+            top: 0;
+            bottom: 0;
+            left: 0;
+            z-index: 100;
+            padding: 48px 0 0;
+            box-shadow: inset -1px 0 0 rgba(0, 0, 0, .1);
+            background-color: #343a40; /* 어두운 배경 */
+        }
+        .sidebar-sticky {
+            position: relative;
+            top: 0;
+            height: calc(100vh - 48px);
+            padding-top: .5rem;
+            overflow-x: hidden;
+            overflow-y: auto; 
+        }
+        /* 네비게이션 링크 스타일 */
+        .nav-link {
+            font-weight: 500;
+            color: rgba(255, 255, 255, .75);
+            padding: 15px 20px;
+            font-size: 1.1rem;
+        }
+        .nav-link:hover {
+            color: #fff;
+            background-color: rgba(255,255,255,0.1);
+        }
+        .nav-link.active {
+            color: #fff;
+            background-color: #0d6efd; /* 활성화 시 파란색 */
+        }
+        .nav-link i {
+            margin-right: 10px;
+            width: 20px;
+            text-align: center;
+        }
+        /* 메인 콘텐츠 영역 */
+        main {
+            padding-top: 20px;
+        }
+        /* 푸터 스타일 */
+        footer {
+            margin-top: 50px;
+            padding: 20px 0;
+            border-top: 1px solid #dee2e6;
+            color: #6c757d;
+            text-align: center;
+        }
+    </style>
+    {% block extra_css %}{% endblock %}
+</head>
+
+
+
+<!-- ============================================================================ -->
+
+<body>
+
+<header class="navbar navbar-dark sticky-top bg-dark flex-md-nowrap p-0 shadow d-md-none">
+    <a class="navbar-brand col-md-3 col-lg-2 me-0 px-3" href="#">Gomojang</a>
+    <button class="navbar-toggler position-absolute d-md-none collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#sidebarMenu">
+        <span class="navbar-toggler-icon"></span>
+    </button>
+</header>
+
+
+
+<div class="container-fluid">
+    <div class="row">
+        <nav id="sidebarMenu" class="col-md-3 col-lg-2 d-md-block sidebar collapse">
+            <div class="position-sticky pt-3">
+                <div class="text-center mb-4 text-white">
+                    <h3><i class="fas fa-leaf text-success"></i> 메타파머스</h3>
+                    <small>고정 모니터링 장치</small>
+                </div>
+
+                <ul class="nav flex-column">
+                    <li class="nav-item">
+                        <a class="nav-link {% if request.path == '/dashboard/' %}active{% endif %}" href="/dashboard/">
+                            <i class="fas fa-home"></i> 대시보드
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link {% if request.path == '/graph/' %}active{% endif %}" href="/graph/">
+                            <i class="fas fa-chart-line"></i> 그래프 분석
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link {% if request.path == '/journal/' %}active{% endif %}" href="/journal/">
+                            <i class="fas fa-book"></i> 농장 일지
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link {% if request.path == '/calibration/' %}active{% endif %}" href="/calibration/">
+                            <i class="fas fa-tools"></i> 센서 보정
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link {% if request.path == '/settings/' %}active{% endif %}" href="/settings/">
+                            <i class="fas fa-gear"></i> 설정
+                        </a>
+                    </li>
+                </ul>
+            </div>
+        </nav>
+
+        <main class="col-md-9 ms-sm-auto col-lg-10 px-md-4">
+            
+            <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+                <h1 class="h2">{% block page_title %}고정 모니터링 장치{% endblock %}</h1>
+                <div class="btn-toolbar mb-2 mb-md-0">
+                    <button type="button" class="btn btn-sm btn-outline-secondary dropdown-toggle">
+                        <span data-feather="calendar"></span>
+                        Time Range
+                    </button>
+                    <button type="button" class="btn btn-sm btn-outline-secondary dropdown-toggle">
+                        <span data-feather="calendar"></span>
+                        Time Span
+                    </button>
+                </div>
+            </div>
+
+            {% block content %}
+            {% endblock %}
+
+            <footer>
+                <p>&copy; 2025 Metafarmers Gomojang. All rights reserved.</p>
+                <p class="small">System Version 1.2.1 | 이메일 주소: admin@metafarm.ai</p>
+            </footer>
+
+        </main>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+{% block extra_js %}{% endblock %}
+
+</body>
+</html>

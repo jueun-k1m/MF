@@ -1,0 +1,850 @@
+<!DOCTYPE html>
+{% load static %}
+<html lang="kor">
+<head>
+    <meta charset="UTF-8">
+    <title>omnitor</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@2.9.4/dist/Chart.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Google+Sans+Code:wght@400;700&family=Hahmlet:wght@400;700&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+    <script src="https://cdn.jsdelivr.net/npm/flatpickr/dist/l10n/ko.js"></script>    
+    <script src="https://cdn.jsdelivr.net/npm/moment@2.29.1/moment.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-moment@0.1.1/dist/chartjs-adapter-moment.min.js"></script>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+    
+    <style>
+        /* ... 기존 CSS 스타일 유지 ... */
+        body { 
+            font-family: "Hahmlet", "Google Sans Code", sans-serif;
+            background-color: #f0f2f5;
+            color: #333;
+            margin: 0;
+        }
+        /* ... 중략 ... */
+        .container { max-width: 1600px; margin: auto; padding: 20px; }
+        /* 아래 스타일은 필요 시 기존 CSS에 포함되어 있어야 합니다 */
+        .status-message { margin-top: 15px; font-weight: bold; padding: 10px; border-radius: 5px; display: none; text-align: center; }
+        .status-success { background-color: #d4edda; color: #155724; }
+        .status-error { background-color: #f8d7da; color: #721c24; }
+        .status-info { background-color: #cce5ff; color: #004085; }
+    </style>
+</head>
+<body>
+
+<input type="hidden" name="csrfmiddlewaretoken" value="{{ csrf_token }}">
+
+<div class="container">
+    <h1>고모장</h1>
+    <h2>고정 모니터링 장치</h2>
+    
+    <div class="tab-nav">
+        <button class="tab-button active" data-tab="realtime">대시보드</button>
+        <button class="tab-button" data-tab="graphs">그래프</button>
+        <button class="tab-button" data-tab="journal">농장 일지</button>
+        <button class="tab-button" data-tab="calibration">보정 설정</button>
+    </div>
+
+    <div id="realtime" class="tab-content active">
+        <h2>대시보드</h2>
+        <h3>환경</h3>
+        <div class="data-grid">
+            <div class="data-card">
+                <div class="label">온도</div>
+                <div class="progress-circle-container">
+                    <svg width="180" height="180" viewBox="-22.75 -22.75 227.5 227.5">
+                        <circle class="progress-bg" r="81" cx="91" cy="91"></circle>
+                        <circle id="inner-air_temperature" r="71" cx="91" cy="91" fill="#E8F5E9"></circle>
+                        <circle class="progress-fg" r="81" cx="91" cy="91" id="bar-air_temperature" stroke-dasharray="509" stroke-dashoffset="509" stroke="#63D65C"></circle>
+                        <text class="progress-text" x="91" y="86" id="text-air_temperature">-</text>
+                        <text class="progress-unit" x="66" y="160">°C</text>
+                    </svg>
+                </div>
+            </div>
+            <div class="data-card">
+                <div class="label">습도</div>
+                <div class="progress-circle-container">
+                    <svg width="180" height="180" viewBox="-22.75 -22.75 227.5 227.5">
+                        <circle class="progress-bg" r="81" cx="91" cy="91"></circle>
+                        <circle id="inner-air_humidity" r="71" cx="91" cy="91" fill="#E8F5E9"></circle>
+                        <circle class="progress-fg" r="81" cx="91" cy="91" id="bar-air_humidity" stroke-dasharray="509" stroke-dashoffset="509" stroke="#63D65C"></circle>
+                        <text class="progress-text" x="91" y="86" id="text-air_humidity">-</text>
+                        <text class="progress-unit" x="66" y="160">%</text>
+                    </svg>
+                </div>
+            </div>
+             <div class="data-card">
+                <div class="label">이산화탄소</div>
+                <div class="progress-circle-container">
+                    <svg width="180" height="180" viewBox="-22.75 -22.75 227.5 227.5">
+                        <circle class="progress-bg" r="81" cx="91" cy="91"></circle>
+                        <circle id="inner-co2" r="71" cx="91" cy="91" fill="#E8F5E9"></circle>
+                        <circle class="progress-fg" r="81" cx="91" cy="91" id="bar-co2" stroke-dasharray="509" stroke-dashoffset="509" stroke="#63D65C"></circle>
+                        <text class="progress-text" x="91" y="86" id="text-co2">-</text>
+                        <text class="progress-unit" x="66" y="160">ppm</text>
+                    </svg>
+                </div>
+            </div>
+             <div class="data-card">
+                <div class="label">일사량</div>
+                <div class="progress-circle-container">
+                    <svg width="180" height="180" viewBox="-22.75 -22.75 227.5 227.5">
+                        <circle class="progress-bg" r="81" cx="91" cy="91"></circle>
+                        <circle id="inner-insolation" r="71" cx="91" cy="91" fill="#E8F5E9"></circle>
+                        <circle class="progress-fg" r="81" cx="91" cy="91" id="bar-insolation" stroke-dasharray="509" stroke-dashoffset="509" stroke="#63D65C"></circle>
+                        <text class="progress-text" x="91" y="86" id="text-insolation">-</text>
+                        <text class="progress-unit" x="66" y="160">W/m²</text>
+                    </svg>
+                </div>
+            </div>
+        </div>
+
+        <h3>무게 & 배액량</h3>
+        <div class="data-grid">
+             <div class="data-card">
+                <div class="label">총 무게</div>
+                <div class="progress-circle-container">
+                    <svg width="180" height="180" viewBox="-22.75 -22.75 227.5 227.5">
+                        <circle class="progress-bg" r="81" cx="91" cy="91"></circle>
+                        <circle id="inner-weight" r="71" cx="91" cy="91" fill="#E8F5E9"></circle>
+                        <circle class="progress-fg" r="81" cx="91" cy="91" id="bar-weight" stroke-dasharray="509" stroke-dashoffset="509" stroke="#63D65C"></circle>
+                        <text class="progress-text" x="91" y="86" id="text-weight">-</text>
+                        <text class="progress-unit" x="66" y="160">g</text>
+                    </svg>
+                </div>
+            </div>
+            <div class="data-card">
+                <div class="label">급수량</div>
+                <div class="progress-circle-container">
+                    <svg width="180" height="180" viewBox="-22.75 -22.75 227.5 227.5">
+                        <circle class="progress-bg" r="81" cx="91" cy="91"></circle>
+                        <circle id="inner-irrigation" r="71" cx="91" cy="91" fill="#E8F5E9"></circle>
+                        <circle class="progress-fg" r="81" cx="91" cy="91" id="bar-irrigation" stroke-dasharray="509" stroke-dashoffset="509" stroke="#63D65C"></circle>
+                        <text class="progress-text" x="91" y="86" id="text-irrigation">-</text>
+                        <text class="progress-unit" x="66" y="160">mL</text>
+                    </svg>
+                </div>
+            </div>
+            <div class="data-card">
+                <div class="label">배액량</div>
+                <div class="progress-circle-container">
+                    <svg width="180" height="180" viewBox="-22.75 -22.75 227.5 227.5">
+                        <circle class="progress-bg" r="81" cx="91" cy="91"></circle>
+                        <circle id="inner-drainage" r="71" cx="91" cy="91" fill="#E8F5E9"></circle>
+                        <circle class="progress-fg" r="81" cx="91" cy="91" id="bar-drainage" stroke-dasharray="509" stroke-dashoffset="509" stroke="#63D65C"></circle>
+                        <text class="progress-text" x="91" y="86" id="text-drainage">-</text>
+                        <text class="progress-unit" x="66" y="160">mL</text>
+                    </svg>
+                </div>
+            </div>
+        </div>
+
+        <h3>배액 수온, pH, EC</h3>
+        <div class="data-grid">
+            <div class="data-card">
+                <div class="label">수온</div>
+                <div class="progress-circle-container">
+                    <svg width="180" height="180" viewBox="-22.75 -22.75 227.5 227.5">
+                        <circle class="progress-bg" r="81" cx="91" cy="91"></circle>
+                        <circle id="inner-water_temperature" r="71" cx="91" cy="91" fill="#E8F5E9"></circle>
+                        <circle class="progress-fg" r="81" cx="91" cy="91" id="bar-water_temperature" stroke-dasharray="509" stroke-dashoffset="509" stroke="#63D65C"></circle>
+                        <text class="progress-text" x="91" y="86" id="text-water_temperature">-</text>
+                        <text class="progress-unit" x="66" y="160">°C</text>
+                    </svg>
+                </div>
+            </div>
+             <div class="data-card">
+                <div class="label">pH</div>
+                <div class="progress-circle-container">
+                    <svg width="180" height="180" viewBox="-22.75 -22.75 227.5 227.5">
+                        <circle class="progress-bg" r="81" cx="91" cy="91"></circle>
+                        <circle id="inner-ph" r="71" cx="91" cy="91" fill="#E8F5E9"></circle>
+                        <circle class="progress-fg" r="81" cx="91" cy="91" id="bar-ph" stroke-dasharray="509" stroke-dashoffset="509" stroke="#63D65C"></circle>
+                        <text class="progress-text" x="91" y="86" id="text-ph">-</text>
+                        <text class="progress-unit" x="66" y="160">pH</text>
+                    </svg>
+                </div>
+            </div>
+             <div class="data-card">
+                <div class="label">EC</div>
+                <div class="progress-circle-container">
+                    <svg width="180" height="180" viewBox="-22.75 -22.75 227.5 227.5">
+                        <circle class="progress-bg" r="81" cx="91" cy="91"></circle>
+                        <circle id="inner-ec" r="71" cx="91" cy="91" fill="#E8F5E9"></circle>
+                        <circle class="progress-fg" r="81" cx="91" cy="91" id="bar-ec" stroke-dasharray="509" stroke-dashoffset="509" stroke="#63D65C"></circle>
+                        <text class="progress-text" x="91" y="86" id="text-ec">-</text>
+                        <text class="progress-unit" x="66" y="160">uS/cm</text>
+                    </svg>
+                </div>
+            </div>
+        </div>
+
+        <h3>토양</h3>
+        <div class="data-grid">
+             <div class="data-card">
+                <div class="label">토양 온도</div>
+                <div class="progress-circle-container">
+                    <svg width="180" height="180" viewBox="-22.75 -22.75 227.5 227.5">
+                        <circle class="progress-bg" r="81" cx="91" cy="91"></circle>
+                        <circle id="inner-soil_temperature" r="71" cx="91" cy="91" fill="#E8F5E9"></circle>
+                        <circle class="progress-fg" r="81" cx="91" cy="91" id="bar-soil_temperature" stroke-dasharray="509" stroke-dashoffset="509" stroke="#63D65C"></circle>
+                        <text class="progress-text" x="91" y="86" id="text-soil_temperature">-</text>
+                        <text class="progress-unit" x="66" y="160">°C</text>
+                    </svg>
+                </div>
+            </div>
+            <div class="data-card">
+                <div class="label">토양 습도</div>
+                <div class="progress-circle-container">
+                    <svg width="180" height="180" viewBox="-22.75 -22.75 227.5 227.5">
+                        <circle class="progress-bg" r="81" cx="91" cy="91"></circle>
+                        <circle id="inner-soil_humidity" r="71" cx="91" cy="91" fill="#E8F5E9"></circle>
+                        <circle class="progress-fg" r="81" cx="91" cy="91" id="bar-soil_humidity" stroke-dasharray="509" stroke-dashoffset="509" stroke="#63D65C"></circle>
+                        <text class="progress-text" x="91" y="86" id="text-soil_humidity">-</text>
+                        <text class="progress-unit" x="66" y="160">%</text>
+                    </svg>
+                </div>
+            </div>
+             <div class="data-card">
+                <div class="label">토양 EC</div>
+                <div class="progress-circle-container">
+                    <svg width="180" height="180" viewBox="-22.75 -22.75 227.5 227.5">
+                        <circle class="progress-bg" r="81" cx="91" cy="91"></circle>
+                        <circle id="inner-soil_ec" r="71" cx="91" cy="91" fill="#E8F5E9"></circle>
+                        <circle class="progress-fg" r="81" cx="91" cy="91" id="bar-soil_ec" stroke-dasharray="509" stroke-dashoffset="509" stroke="#63D65C"></circle>
+                        <text class="progress-text" x="91" y="86" id="text-soil_ec">-</text>
+                        <text class="progress-unit" x="66" y="160">uS/cm</text>
+                    </svg>
+                </div>
+            </div>
+            <div class="data-card">
+                <div class="label">토양 pH</div>
+                <div class="progress-circle-container">
+                    <svg width="180" height="180" viewBox="-22.75 -22.75 227.5 227.5">
+                        <circle class="progress-bg" r="81" cx="91" cy="91"></circle>
+                        <circle id="inner-soil_ph" r="71" cx="91" cy="91" fill="#E8F5E9"></circle>
+                        <circle class="progress-fg" r="81" cx="91" cy="91" id="bar-soil_ph" stroke-dasharray="509" stroke-dashoffset="509" stroke="#63D65C"></circle>
+                        <text class="progress-text" x="91" y="86" id="text-soil_ph">-</text>
+                        <text class="progress-unit" x="66" y="160">pH</text>
+                    </svg>
+                </div>
+            </div>
+        </div>
+        <p style="text-align: center; margin-top: 20px; color: #888;">마지막 업데이트 시간: <span id="latest-timestamp">-</span></p>
+    </div>
+
+    <div id="graphs" class="tab-content">
+        <h2>그래프</h2>
+        <div class="graph-controls">
+            <label for="timespan-select">시간 범위 설정:</label>
+            <select id="timespan-select">
+                <option value="10m">지난 10분</option>
+                <option value="1h" selected>지난 1시간</option>
+                <option value="1d">지난 24시간</option>
+                <option value="7d">지난 7일</option>
+                <option value="custom">직접 선택하기...</option> 
+            </select>
+            <div id="date-range-picker-container"> 
+                <label for="date-range-picker">날짜를 선택하세요:</label>
+                <input type="text" id="date-range-picker" class="date-range-picker" placeholder="Select date range...">
+            </div>
+            <button id="refresh-graphs-btn" style="margin-left: 10px;">데이터 가져오기</button>
+             <span id="graph-status" class="status-message" style="margin-left: 15px;"></span> 
+        </div>
+        <div class="chart-container"><canvas id="weightChart"></canvas></div>
+        <div class="chart-container"><canvas id="envChart"></canvas></div>
+        <div class="chart-container"><canvas id="waterChart"></canvas></div>
+        <div class="chart-container"><canvas id="soilChart"></canvas></div>
+    </div>
+
+    <div id="journal" class="tab-content">
+        <h2>농장 일지</h2>
+        <div class="journal-layout">
+            <div class="journal-col-left">
+                <div id="journal-calendar-container">
+                    <input type="text" id="journal-calendar" style="display:none;">
+                    <div style="margin-top: 20px; padding-top:15px; border-top: 1px solid #eee;">
+                        <h4>일일 캡처 시간</h4>
+                        <div style="margin-bottom: 5px;">
+                            <span>현재: </span>
+                            <strong id="current-capture-time-display" style="color: #007bff;">--:--</strong>
+                        </div>
+                        <div>
+                            <input type="time" id="new-capture-time-input" style="padding: 5px; border: 1px solid #ddd; border-radius: 4px;">
+                            <button type="button" id="save-capture-time-btn" style="padding: 5px 10px; background: #555; color: white; border: none; border-radius: 4px; cursor: pointer;">저장</button>
+                        </div>
+                    </div>
+                </div>
+                <div class="journal-image-section">
+                    <h4>현장 사진</h4>
+                    <img id="journal-image" src="https://placehold.co/600x400/eee/ccc?text=No+Image" alt="Journal Image">
+                    <p id="image-capture-time-display" style="text-align: center; color: #888; font-size: 0.85em; margin-top: 5px; background: none;"></p>
+                    <a id="download-image-link" href="#" style="display: none;" download>이미지 저장</a>
+                </div>
+            </div>
+            <div class="journal-col-center journal-display">
+                <h3><span id="display-date" style="color: #2c3e50;">오늘</span>의 기록</h3>
+                <div id="journal-content-display">
+                    <p style="color: #888; text-align: center; padding-top: 50px;">달력에서 날짜를 선택하면<br>작성된 일지가 여기에 표시돼.</p>
+                </div>
+            </div>
+            <div class="journal-col-right journal-form">
+                <h3>일지 작성/수정</h3>
+                <form id="journal-entry-form">
+                    <input type="hidden" id="form-date">
+                    <label>1. 농작업</label><textarea id="farm_work" name="farm_work"></textarea>
+                    <label>2. 농약</label><textarea id="pesticide" name="pesticide" style="min-height: 50px;"></textarea>
+                    <label>3. 비료</label><textarea id="fertilizer" name="fertilizer" style="min-height: 50px;"></textarea>
+                    <label>4. 수확</label><textarea id="harvest" name="harvest" style="min-height: 50px;"></textarea>
+                    <label>5. 특이사항</label><textarea id="notes" name="notes"></textarea>
+                    <div style="margin-top: 15px; text-align: right;">
+                        <button type="button" id="save-journal-btn" style="background-color: #4CAF50; color: white; padding: 10px 20px; border: none; border-radius: 5px; font-size: 16px; cursor: pointer; width: 100%;">저장하기</button>
+                    </div>
+                    <div id="journal-status" class="status-message" style="margin-top:10px; text-align: center; font-weight: bold;"></div>
+                </form>
+            </div>
+        </div> 
+    </div>
+
+    <div id="calibration" class="tab-content">
+        <div class="status-message status-info" style="display:block; margin-bottom: 20px;">
+            ※ 보정은 센서가 안정된 상태에서 진행해주세요. "입력" 버튼을 누르면 현재 센서 값이 해당 포인트로 저장됩니다.
+        </div>
+        <div class="calibration-section">
+            <div class="calibration-box">
+                <h2>무게 보정</h2>
+                <p><strong>점 1 (예: 0g, 빈 저울)</strong></p>
+                <input type="number" step="1" id="weight-val-1" value="0"> <span>g</span>
+                <button id="weight-cal-btn-1">입력 (현재 무게 저장)</button>
+                <br><br>
+                <p><strong>점 2 (예: 1000g, 분동)</strong></p>
+                <input type="number" step="1" id="weight-val-2" value="1000"> <span>g</span>
+                <button id="weight-cal-btn-2">입력 (현재 무게 저장)</button>
+                <div id="weight-status" class="status-message"></div>
+            </div>
+            <div class="calibration-box">
+                <h2>pH 보정</h2>
+                <p><strong>점 1 (예: 7.0)</strong></p>
+                <input type="number" step="0.1" id="ph-val-1" value="7.0">
+                <button id="ph-cal-btn-1">입력 (현재 pH 저장)</button>
+                <br><br>
+                <p><strong>점 2 (예: 4.0)</strong></p>
+                <input type="number" step="0.1" id="ph-val-2" value="4.0">
+                <button id="ph-cal-btn-2">입력 (현재 pH 저장)</button>
+                <div id="ph-status" class="status-message"></div>
+            </div>
+            <div class="calibration-box">
+                <h2>EC 보정</h2>
+                <p><strong>점 1 (예: 1413 uS/cm)</strong></p>
+                <input type="number" id="ec-val-1" value="1413">
+                <button id="ec-cal-btn-1">입력 (현재 EC 저장)</button>
+                <br><br>
+                <p><strong>점 2 (예: 12880 uS/cm)</strong></p>
+                <input type="number" id="ec-val-2" value="12880">
+                <button id="ec-cal-btn-2">입력 (현재 EC 저장)</button>
+                <div id="ec-status" class="status-message"></div>
+            </div>
+        </div>
+         <div style="text-align:center; margin-top: 30px;">
+            <button id="save-settings-btn">최종 보정 적용 (저장)</button>
+            <div id="save-status" class="status-message" style="margin: 15px auto 0; max-width: 500px;"></div>
+        </div>
+    </div>
+</div>
+
+<footer class="page-footer">
+    <div class="footer-left">
+        <img src="{% static 'images/logo.png' %}" alt="omnitor Logo">
+        <div class="footer-text">
+            <p><strong>Metafarmers</strong></p>
+            <p>what began with farmers;</p>
+            <p>robots carry forward</p>
+        </div>
+    </div>
+    <div class="footer-right">
+        <p> (주)메타파머스 </p>
+    </div>
+</footer>
+
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+
+    const csrftoken = document.querySelector('[name=csrfmiddlewaretoken]').value;
+    let charts = {};
+    let calendar;
+    let dateRangePicker;
+
+    // --- Event Listeners ---
+    document.querySelectorAll('.tab-button').forEach(button => {
+        button.addEventListener('click', (event) => {
+            showTab(event.currentTarget, event.currentTarget.getAttribute('data-tab'));
+        });
+    });
+
+    document.getElementById('save-journal-btn').addEventListener('click', saveJournalEntry);
+    document.getElementById('save-capture-time-btn').addEventListener('click', saveCameraCaptureTime);
+    
+    // Calibration Buttons: Simplified to match backend 'calibrate.py' actions
+    document.getElementById('weight-cal-btn-1').addEventListener('click', () => performCalibration('calibrate_weight1', 'weight', 1));
+    document.getElementById('weight-cal-btn-2').addEventListener('click', () => performCalibration('calibrate_weight2', 'weight', 2));
+    document.getElementById('ph-cal-btn-1').addEventListener('click', () => performCalibration('calibrate_ph1', 'ph', 1));
+    document.getElementById('ph-cal-btn-2').addEventListener('click', () => performCalibration('calibrate_ph2', 'ph', 2));
+    document.getElementById('ec-cal-btn-1').addEventListener('click', () => performCalibration('calibrate_ec1', 'ec', 1));
+    document.getElementById('ec-cal-btn-2').addEventListener('click', () => performCalibration('calibrate_ec2', 'ec', 2));
+    document.getElementById('save-settings-btn').addEventListener('click', saveAllCalibration);
+
+    document.getElementById('timespan-select').addEventListener('change', handleGraphControlsChange);
+    document.getElementById('refresh-graphs-btn').addEventListener('click', updateAllCharts); 
+    
+
+    // --- Tab Navigation ---
+    function showTab(buttonElement, tabName) {
+        document.querySelectorAll(".tab-content").forEach(el => el.style.display = "none");
+        document.querySelectorAll(".tab-button").forEach(el => el.classList.remove("active"));
+        document.getElementById(tabName).style.display = "block";
+        buttonElement.classList.add("active");
+
+        if (tabName === 'graphs') {
+            initializeDateRangePicker();
+            if (Object.keys(charts).length === 0) {
+                 initializeCharts();
+            }
+             handleGraphControlsChange();
+        }
+        if (tabName === 'journal') {
+            initializeCalendar();
+            loadCurrentCaptureTime();
+        }
+    }
+    
+    // --- API Helper ---
+    async function fetchWithTimeout(url, options = {}, timeout = 15000) {
+        const controller = new AbortController();
+        const id = setTimeout(() => controller.abort(), timeout);
+        if (options.method === 'POST') {
+            options.headers = { 'Content-Type': 'application/json', 'X-CSRFToken': csrftoken, ...options.headers };
+        }
+        try {
+            const response = await fetch(url, { ...options, signal: controller.signal });
+            clearTimeout(id);
+            return response;
+        } catch (error) {
+            clearTimeout(id); throw error;
+        }
+    }
+
+    // --- Tab 1: Realtime Dashboard ---
+    function updateProgressCircle(htmlId, value, min, max, defaultColor, defcircleColor) {
+        // dashboard.py에서 보내는 키와 html id를 일치시키기 위해 htmlId를 사용
+        const textEl = document.getElementById(`text-${htmlId}`);
+        const barEl = document.getElementById(`bar-${htmlId}`);
+        const innerEl = document.getElementById(`inner-${htmlId}`);
+
+        if (!textEl || !barEl || !innerEl) return;
+
+        let displayValue = '-';
+        let percentage = 0;
+        const circumference = 509;
+        let strokeColor = defaultColor;
+        let innerFillColor = defcircleColor;
+
+        if (typeof value === 'number' && !isNaN(value)) {
+            if (value === 0) {
+                innerFillColor = '#F3E5FF';
+                strokeColor = '#e0e0e0';
+            }
+            // Simple color logic
+            if (htmlId === 'ph' && (value < 5.0 || value > 7.0)) strokeColor = '#FF4F4F';
+            
+            const clampedValue = Math.max(min, Math.min(value, max));
+            if (max - min !== 0) percentage = (clampedValue - min) / (max - min);
+            
+            displayValue = (value > 100 || value < 1) ? value.toFixed(0) : value.toFixed(1);
+            if (htmlId.includes('ph')) displayValue = value.toFixed(2);
+        }
+
+        const offset = (1 - percentage) * circumference;
+        textEl.textContent = displayValue;
+        barEl.style.strokeDashoffset = offset;
+        barEl.style.stroke = strokeColor;
+        innerEl.style.fill = innerFillColor;
+    }
+
+    async function updateLatestData() {
+        try {
+            const response = await fetchWithTimeout('/dashboard_api/'); // dashboard.py 매핑 가정
+            if (!response.ok) return;
+            const data = await response.json();
+            
+            document.getElementById('latest-timestamp').textContent = data.timestamp || '-';
+
+            // dashboard.py의 JSON Key와 일치하도록 설정
+            const sensorConfig = {
+                'air_temperature': { id:'air_temperature', min: -20, max: 80 },
+                'air_humidity': { id:'air_humidity', min: 0, max: 100 },
+                'co2': { id:'co2', min: 0, max: 5000 },
+                'insolation': { id:'insolation', min: 0, max: 1300 },
+                'weight': { id:'weight', min: 0, max: 80000 },     // Backend: weight
+                'water_temperature': { id:'water_temperature', min: -20, max: 80 },
+                'ph': { id:'ph', min: 0, max: 14 },                 // Backend: ph
+                'ec': { id:'ec', min: 0, max: 5000 },               // Backend: ec
+                'soil_temperature': { id:'soil_temperature', min: -20, max: 80 },
+                'soil_humidity': { id:'soil_humidity', min: 0, max: 100 },
+                'soil_ec': { id:'soil_ec', min: 0, max: 5000 },     // Backend: soil_ec
+                'soil_ph': { id:'soil_ph', min: 0, max: 14 },
+                'irrigation': { id:'irrigation', min: 0, max: 1000, color: '#33A5FF' },
+                'drainage': { id:'drainage', min: 0, max: 5000, color: '#FF9F40' } // Backend: drainage
+            };
+
+            for (const key in sensorConfig) {
+                const config = sensorConfig[key];
+                // data[key]로 값을 가져와서, config.id (HTML ID)에 업데이트
+                const val = data[key];
+                updateProgressCircle(config.id, val, config.min, config.max, config.color || '#73E866', '#E8F5E9');
+            }
+        } catch (error) {
+            console.error("Dashboard error:", error);
+        }
+    }
+
+    // --- Tab 2: Graphs ---
+    function initializeDateRangePicker() {
+        if (dateRangePicker) return;
+        const yesterday = new Date();
+        yesterday.setDate(yesterday.getDate() - 1);
+        const today = new Date();
+
+        dateRangePicker = flatpickr("#date-range-picker", {
+            mode: "range",
+            dateFormat: "Y-m-d",
+            defaultDate: [yesterday, today],
+            onClose: function(selectedDates) {
+                if (document.getElementById('timespan-select').value === 'custom' && selectedDates.length === 2) {
+                     updateAllCharts();
+                }
+            }
+        });
+    }
+
+    function handleGraphControlsChange() {
+        const selectedTimespan = document.getElementById('timespan-select').value;
+        const datePickerContainer = document.getElementById('date-range-picker-container');
+        if (selectedTimespan === 'custom') {
+            datePickerContainer.style.display = 'inline-block';
+        } else {
+            datePickerContainer.style.display = 'none';
+            updateAllCharts();
+        }
+    }
+
+    function initializeCharts() {
+        const commonOptions = { 
+            responsive: true, 
+            maintainAspectRatio: false,
+            scales: { xAxes: [{ type: 'time', time: { tooltipFormat: 'YYYY-MM-DD HH:mm' } }] }
+        };
+        
+        // 차트 생성 로직 (기존과 동일하되 변수명만 차트별로 정리)
+        charts.weight = new Chart(document.getElementById('weightChart').getContext('2d'), { 
+            type: 'line', 
+            data: { datasets: [
+                { label: '총 무게 (g)', borderColor: '#8e5ea2', yAxisID: 'y_weight', fill: false, data: [] },
+                { label: '급수량 (mL)', borderColor: '#33A5FF', yAxisID: 'y_vol', fill: false, borderDash: [5, 5], data: [] },
+                { label: '배액량 (mL)', borderColor: '#FF9F40', yAxisID: 'y_vol', fill: false, data: [] }
+            ]}, 
+            options: { ...commonOptions, title: {display:true, text:'무게 및 수분'}, scales: { 
+                yAxes: [{id:'y_weight', position:'left'}, {id:'y_vol', position:'right'}] ,
+                xAxes: [{ type: 'time' }]
+            }} 
+        });
+
+        charts.env = new Chart(document.getElementById('envChart').getContext('2d'), { 
+            type: 'line',
+            data: { datasets: [
+                { label: '온도', borderColor: '#ff6384', yAxisID: 'y_temp', fill: false, data: [] },
+                { label: '습도', borderColor: '#36a2eb', yAxisID: 'y_hum', fill: false, data: [] },
+                { label: 'CO2', borderColor: '#4bc0c0', yAxisID: 'y_co2', fill: false, data: [] },
+                { label: '일사량', borderColor: '#ffce56', yAxisID: 'y_rad', fill: false, data: [] }
+            ]},
+            options: { ...commonOptions, title: {display:true, text:'환경'}, scales: { 
+                yAxes: [{id:'y_temp', position:'left'}, {id:'y_hum', position:'right'}, {id:'y_co2', position:'right'}, {id:'y_rad', position:'left'}] ,
+                xAxes: [{ type: 'time' }]
+            }}
+        });
+        
+        charts.water = new Chart(document.getElementById('waterChart').getContext('2d'), {
+             type: 'line',
+             data: { datasets: [
+                 { label: 'pH', borderColor: '#ff9f40', yAxisID: 'y_ph', fill: false, data: [] },
+                 { label: 'EC', borderColor: '#c9cbcf', yAxisID: 'y_ec', fill: false, data: [] },
+                 { label: '수온', borderColor: '#33A5FF', yAxisID: 'y_wtemp', fill: false, data: [] }
+             ]},
+             options: { ...commonOptions, title: {display:true, text:'배액'}, scales: { yAxes: [{id:'y_ph', position:'left'}, {id:'y_ec', position:'right'}, {id:'y_wtemp', position:'left'}], xAxes: [{ type: 'time' }] }}
+        });
+
+        charts.soil = new Chart(document.getElementById('soilChart').getContext('2d'), {
+             type: 'line',
+             data: { datasets: [
+                 { label: '토양온도', borderColor: '#D9534F', yAxisID: 'y_st', fill: false, data: [] },
+                 { label: '토양습도', borderColor: '#5CB85C', yAxisID: 'y_sh', fill: false, data: [] },
+                 { label: '토양EC', borderColor: '#333', yAxisID: 'y_se', fill: false, data: [] },
+                 { label: '토양pH', borderColor: '#F0AD4E', yAxisID: 'y_sp', fill: false, data: [] }
+             ]},
+             options: { ...commonOptions, title: {display:true, text:'토양'}, scales: { yAxes: [{id:'y_st', position:'left'}, {id:'y_sh', position:'right'}, {id:'y_se', position:'right'}, {id:'y_sp', position:'left'}], xAxes: [{ type: 'time' }] }}
+        });
+    }
+
+    async function updateAllCharts() {
+        const selectedOption = document.getElementById('timespan-select').value;
+        // graph.py는 'graph_api' 함수임. URL 매핑 가정: /graph_api/
+        let apiUrl = '/graph_api/'; 
+        let queryParams = '';
+
+        if (selectedOption === 'custom') {
+            if (!dateRangePicker || dateRangePicker.selectedDates.length !== 2) return;
+            const sDate = dateRangePicker.selectedDates[0].toISOString();
+            const eDate = dateRangePicker.selectedDates[1].toISOString();
+            queryParams = `?start_date=${sDate}&end_date=${eDate}&time_unit=1h`; // graph.py param
+        } else {
+            // graph.py expects 'time_range' not 'timespan'
+            queryParams = `?time_range=${selectedOption}&time_unit=10m`;
+            if(selectedOption === '7d') queryParams = `?time_range=${selectedOption}&time_unit=3h`;
+        }
+        
+        setStatus('graph-status', '로딩중...', 'info');
+
+        try {
+            const response = await fetchWithTimeout(apiUrl + queryParams);
+            if (!response.ok) throw new Error("Data fetch failed");
+            const jsonResp = await response.json();
+            const dataList = jsonResp.data; // graph.py returns { data: [ ... ] }
+
+            if (!dataList || dataList.length === 0) {
+                setStatus('graph-status', '데이터가 없습니다.', 'info');
+                return;
+            }
+
+            // --- Convert flat list to Chart.js datasets ---
+            // Data fields mapping based on graph.py response
+            const fields = {
+                // Chart: weight
+                weight: [], irrigation: [], drainage: [],
+                // Chart: env
+                air_temperature: [], air_humidity: [], co2: [], insolation: [],
+                // Chart: water
+                ph: [], ec: [], water_temperature: [],
+                // Chart: soil
+                soil_temperature: [], soil_humdity: [], soil_ec: [], soil_ph: []
+            };
+
+            dataList.forEach(row => {
+                const t = row.created_at || row.timestamp; // graph.py might return 'created_at' after rename
+                // Push {x, y}
+                fields.weight.push({x: t, y: row.weight});
+                fields.irrigation.push({x: t, y: row.irrigation});
+                fields.drainage.push({x: t, y: row.total_drainage}); // graph.py field name
+
+                fields.air_temperature.push({x: t, y: row.air_temperature});
+                fields.air_humidity.push({x: t, y: row.air_humidity});
+                fields.co2.push({x: t, y: row.co2});
+                fields.insolation.push({x: t, y: row.insolation});
+
+                fields.ph.push({x: t, y: row.ph});
+                fields.ec.push({x: t, y: row.ec});
+                fields.water_temperature.push({x: t, y: row.water_temperature});
+
+                fields.soil_temperature.push({x: t, y: row.soil_temperature});
+                fields.soil_humdity.push({x: t, y: row.soil_humdity}); // Note spelling in graph.py
+                fields.soil_ec.push({x: t, y: row.soil_ec});
+                fields.soil_ph.push({x: t, y: row.soil_ph});
+            });
+
+            // Assign to charts
+            charts.weight.data.datasets[0].data = fields.weight;
+            charts.weight.data.datasets[1].data = fields.irrigation;
+            charts.weight.data.datasets[2].data = fields.drainage;
+            charts.weight.update();
+
+            charts.env.data.datasets[0].data = fields.air_temperature;
+            charts.env.data.datasets[1].data = fields.air_humidity;
+            charts.env.data.datasets[2].data = fields.co2;
+            charts.env.data.datasets[3].data = fields.insolation;
+            charts.env.update();
+
+            charts.water.data.datasets[0].data = fields.ph;
+            charts.water.data.datasets[1].data = fields.ec;
+            charts.water.data.datasets[2].data = fields.water_temperature;
+            charts.water.update();
+            
+            charts.soil.data.datasets[0].data = fields.soil_temperature;
+            charts.soil.data.datasets[1].data = fields.soil_humdity;
+            charts.soil.data.datasets[2].data = fields.soil_ec;
+            charts.soil.data.datasets[3].data = fields.soil_ph;
+            charts.soil.update();
+
+            setStatus('graph-status', '업데이트 완료', 'success');
+        } catch (e) {
+            console.error(e);
+            setStatus('graph-status', '오류 발생', 'error');
+        }
+    }
+
+    // --- Tab 3: Journal ---
+    function initializeCalendar() {
+        if (calendar) return;
+        calendar = flatpickr("#journal-calendar", {
+            inline: true,
+            defaultDate: "today",
+            dateFormat: "Y-m-d",
+            locale: "ko",
+            onChange: function(selectedDates, dateStr) { loadJournalEntry(dateStr); }
+        });
+        loadJournalEntry(new Date().toISOString().split('T')[0]);
+    }
+
+    async function loadJournalEntry(date) {
+        document.getElementById('display-date').textContent = date;
+        document.getElementById('form-date').value = date;
+        const displayDiv = document.getElementById('journal-content-display');
+        const form = document.getElementById('journal-entry-form');
+        const imgEl = document.getElementById('journal-image');
+        const timeEl = document.getElementById('image-capture-time-display');
+
+        try {
+            const response = await fetchWithTimeout(`/journal_api/?date=${date}`);
+            const json = await response.json();
+            
+            // Image Logic
+            // journal.py에서 image_dir를 주지만, static 서빙 경로가 명확하지 않아 기존 로직 활용하되 파라미터 추가
+            imgEl.src = `/static/journal_images/${date}.jpg?t=${new Date().getTime()}`;
+            imgEl.onerror = () => { imgEl.src = 'https://placehold.co/600x400/eee/ccc?text=No+Image'; };
+            
+            // Journal Data Logic (Backend: {status: 'success', exists: true, data: {...}})
+            if (json.exists && json.data) {
+                const d = json.data;
+                form.farm_work.value = d.work || ''; // journal.py uses 'work', not 'farm_work'
+                form.pesticide.value = d.pesticide || '';
+                form.fertilizer.value = d.fertilizer || '';
+                form.harvest.value = d.harvest || '';
+                form.notes.value = d.notes || '';
+                
+                timeEl.textContent = d.cam_time ? `촬영 시간: ${d.cam_time}` : '';
+
+                displayDiv.innerHTML = `
+                    <h4>1. 농작업:</h4><p>${d.work||'-'}</p>
+                    <h4>2. 농약:</h4><p>${d.pesticide||'-'}</p>
+                    <h4>3. 비료:</h4><p>${d.fertilizer||'-'}</p>
+                    <h4>4. 수확:</h4><p>${d.harvest||'-'}</p>
+                    <h4>5. 특이사항:</h4><p>${d.notes||'-'}</p>
+                `;
+            } else {
+                form.reset();
+                displayDiv.innerHTML = '<p>작성된 일지가 없습니다.</p>';
+                timeEl.textContent = '';
+            }
+        } catch (e) { console.error(e); }
+    }
+
+    async function saveJournalEntry() {
+        const date = document.getElementById('form-date').value;
+        const payload = {
+            date: date,
+            work: document.getElementById('farm_work').value, // Matches journal.py
+            pesticide: document.getElementById('pesticide').value,
+            fertilizer: document.getElementById('fertilizer').value,
+            harvest: document.getElementById('harvest').value,
+            notes: document.getElementById('notes').value
+        };
+        try {
+            const res = await fetchWithTimeout('/journal_api/', { method:'POST', body: JSON.stringify(payload) });
+            if(res.ok) {
+                setStatus('journal-status', '저장 완료', 'success');
+                loadJournalEntry(date);
+            } else {
+                setStatus('journal-status', '저장 실패', 'error');
+            }
+        } catch(e) { setStatus('journal-status', '에러 발생', 'error'); }
+    }
+
+    async function loadCurrentCaptureTime() {
+        // camera_time.py: returns { capture_time: "HH:MM", ... }
+        try {
+            const res = await fetchWithTimeout('/camera_time_api/');
+            const data = await res.json();
+            if(data.capture_time) {
+                document.getElementById('current-capture-time-display').textContent = data.capture_time;
+                document.getElementById('new-capture-time-input').value = data.capture_time;
+            }
+        } catch(e) {}
+    }
+
+    async function saveCameraCaptureTime() {
+        const timeVal = document.getElementById('new-capture-time-input').value;
+        try {
+            const res = await fetchWithTimeout('/camera_time_api/', { method:'POST', body: JSON.stringify({capture_time: timeVal}) });
+            if(res.ok) {
+                document.getElementById('current-capture-time-display').textContent = timeVal;
+                alert('시간 설정 완료');
+            }
+        } catch(e) { alert('설정 실패'); }
+    }
+
+
+    // --- Tab 4: Calibration ---
+    function setStatus(id, msg, type) {
+        const el = document.getElementById(id);
+        el.textContent = msg;
+        el.className = `status-message status-${type}`;
+        el.style.display = 'block';
+    }
+
+    async function performCalibration(action, type, pointNum) {
+        // calibrate.py는 DB에 현재 값을 저장함. 프론트엔드는 "현재값 저장해줘" 라고 요청만 함.
+        const inputId = `${type}-val-${pointNum}`;
+        const realValue = document.getElementById(inputId).value;
+        const statusId = `${type}-status`;
+
+        // Payload Construction based on calibrate.py expectations
+        let payload = { action: action };
+        
+        // Add specific key dependent on action (e.g., weight_real1)
+        if (type === 'weight') payload[`weight_real${pointNum}`] = realValue;
+        else if (type === 'ph') payload[`ph_real${pointNum}`] = realValue; // calibrate.py expects ph_real1
+        else if (type === 'ec') payload[`ec_real${pointNum}`] = realValue;
+
+        // 추가 데이터 (ph/ec는 수온도 같이 보냄, 현재 Input이 없어서 25도 고정이나 빈값 보냄)
+        // calibrate.py logic requires 'ph_water_temperature1' key existence? -> It uses .get(), so optional or None.
+        
+        setStatus(statusId, `Point ${pointNum} 저장 중...`, 'info');
+
+        try {
+            const res = await fetchWithTimeout('/calibrate_api/', { method: 'POST', body: JSON.stringify(payload) });
+            const json = await res.json();
+            
+            if (res.ok) {
+                setStatus(statusId, json.message || "저장 완료", 'success');
+            } else {
+                setStatus(statusId, json.error || "저장 실패", 'error');
+            }
+        } catch (e) {
+            setStatus(statusId, "네트워크 오류", 'error');
+        }
+    }
+
+    async function saveAllCalibration() {
+        // calibrate.py 'save_all_calibration' or 'save_weight_calibration' etc.
+        // 여기서는 각각 저장을 지원하거나 한번에 저장을 지원함.
+        // 일단 전체 저장을 요청
+        try {
+            const res = await fetchWithTimeout('/calibrate_api/', { method: 'POST', body: JSON.stringify({action: 'save_all_calibration'}) });
+            if (res.ok) setStatus('save-status', '모든 보정 설정이 적용되었습니다.', 'success');
+            else setStatus('save-status', '적용 실패', 'error');
+        } catch(e) { setStatus('save-status', '오류', 'error'); }
+    }
+
+    // Init
+    updateLatestData();
+    setInterval(updateLatestData, 5000);
+});
+</script>
+</body>
+</html>
