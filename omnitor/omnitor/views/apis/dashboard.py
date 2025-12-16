@@ -2,7 +2,7 @@
 
 import json
 from django.http import JsonResponse
-from django.omnitor.omnitor.models.models import FinalData  # 모델 경로 확인 필요
+from omnitor.models import FinalData  # 모델 경로 확인 필요
 
 def dashboard_api(request):
     
