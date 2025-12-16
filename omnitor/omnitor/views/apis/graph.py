@@ -5,11 +5,12 @@ from datetime import timedelta
 from django.http import JsonResponse, HttpResponse
 from django.utils import timezone
 from django.utils.dateparse import parse_datetime
-from models import FinalData
+from omnitor.models import FinalData
 
 def graph_api(request):
     if request.method == 'GET':
 
+        # 시작 날짜, 끝 날짜, 시간 범위, 시간 단위, format (csv or not) 받기
         start_date_str = request.GET.get('start_date')
         end_date_str = request.GET.get('end_date')
         time_range = request.GET.get('time_range')
@@ -17,24 +18,24 @@ def graph_api(request):
         fmt = request.GET.get('format')
 
         end_time = timezone.now()
-        start_time = end_time - timedelta(minutes=1) # 디폴트 1시간으로 설정
+        start_time = end_time - timedelta(hours=1) # 디폴트: 1시간
 
 
         # ======= 시간 범위 설정 =======
         try:
-            # 시간 범위: 직접 시간 지정
+            # 시간 범위 직접 선택  
             if start_date_str and end_date_str:
                 start_time = parse_datetime(start_date_str)
                 end_time = parse_datetime(end_date_str)
 
-            # 시간 범위: 최근 10분/1시간/1일/1주 선택
+            # 시간 범위 4가지 선택 중 하나
             elif time_range:
                 if time_range == '10m': start_time = end_time - timedelta(minutes=10)
                 elif time_range == '1h': start_time = end_time - timedelta(hours=1)
                 elif time_range == '1d': start_time = end_time - timedelta(days=1)
                 elif time_range == '7d': start_time = end_time - timedelta(days=7)
         except (ValueError, TypeError):
-            return JsonResponse({'error': 'Invalid parameters'}, status=400)
+            return JsonResponse({'error': '파라미터 오류'}, status=400)
         
         # DB에서 시간 범위 안에 있는 데이터 가져오기
         data = FinalData.objects.filter(
@@ -42,19 +43,21 @@ def graph_api(request):
         ).values('timestamp', 'air_temperature', 'air_humidity', 'co2', 'insolation', 'total_insolation', 'vpd', 
                  'weight', 'irrigation', 'total_irrigation', 'total_drainage',
                  'water_temperature', 'ph', 'ec', 
-                 'soil_temperature', 'soil_humdity', 'soil_ec', 'soil_ph')
+                 'soil_temperature', 'soil_humidity', 'soil_ec', 'soil_ph')
 
         data_list = list(data)
 
         if not data_list:
-            return JsonResponse(_____)
+            return JsonResponse({'error': '데이터 (리스트) 없음'}, status=404)
         
 
-        # ======= 시간 단위 설정 =======
+        # ======= 시간 단위 설정 (pandas 사용) =======
+        # pandas 시간 단위 freq로 주기 설정
         try:
-            data_pandas = pd.DataFrame(data_list)
+            data_pandas = pd.DataFrame(data_list) # pandas에서 데이터프레임 만들기
             data_pandas['timestamp'] = pd.to_datetime(data_pandas['timestamp'])
-            
+
+            # 시간 단위 설정
             freq = None
             if time_unit == '1m' : freq = '1min'
             elif time_unit == '10m': freq = '10min'
@@ -68,14 +71,14 @@ def graph_api(request):
 
                 dp_selected = data_pandas.reindex(target_times, method='nearest', tolerance=tolerance_limit)
                 
-                # 매칭되는 데이터가 없어서 NaN(빈값)이 된 행은 제거
+                # 매칭되는 데이터가 없어서 빈 값이 된 행은 제거
                 dp_selected.dropna(inplace=True)
 
             else:
                 # 단위 선택 안 했으면 원본 그대로
                 dp_selected = data_pandas
 
-            # 결과 반환 (csv or json)
+            # 사용자가 csv로 export 하고 싶다면
             if fmt == 'csv':
                 response = HttpResponse(content_type='text/csv')
                 response['Content-Disposition'] = 'attachment; filename="sensor_data.csv"'
@@ -83,7 +86,7 @@ def graph_api(request):
                 return response
             else:
                 dp_selected.reset_index(inplace=True)
-                # 'index' 컬럼 이름을 'created_at'으로 다시 복구 (프론트엔드 호환성)
+                # 'index' 칼럼 이름을 'created_at'으로 복구
                 dp_selected.rename(columns={'index': 'created_at'}, inplace=True)
                 result_data = dp_selected.to_dict('records')
                 return JsonResponse({'data': result_data}, safe=False)
