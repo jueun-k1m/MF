@@ -11,7 +11,8 @@ import math
 import os
 
 
-from views.pages.dashboard import dashboard_api
+from views.apis.dashboard import dashboard_api
 from views.apis.calibrate import calibrate_api
 from views.apis.camera_time import camera_time_api
 from views.apis.journal import journal_api
+from views.apis.graph import graph_api
