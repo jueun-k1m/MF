@@ -160,10 +160,11 @@ class ArduinoSerial:
 
       # CRC 검증
       payload = packet[3:3+length]
-      recv_crc = packet[3+length] | (packet[4+length-1] << 8)
-
+      recv_crc = packet[3+length] | (packet[3+length+1] << 8)
       calc_crc = self.crc16_modbus(packet[:3] + payload)
-
+      
+      print(f"recv_crc: {recv_crc}, calc_crc: {calc_crc}")
+      
       if recv_crc != calc_crc:
           print("[Parse] CRC mismatch")
           return None
