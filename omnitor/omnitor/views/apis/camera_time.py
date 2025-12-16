@@ -3,7 +3,7 @@
 import json
 from django.http import JsonResponse, HttpResponseBadRequest, HttpResponse
 from datetime import datetime
-from django.omnitor.omnitor.models.models import FarmJournal
+from omnitor.models import FarmJournal
 
 def camera_time_api(request):
     
