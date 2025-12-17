@@ -1,6 +1,6 @@
 # 여기선 보정 계산만 해주고, 실제 언제 호출하고 저장하는지는 views에서 처리함
 
-from django.omnitor.omnitor.models.models import CalibrationData, CalibrationSettings
+from omnitor.models import CalibrationData, CalibrationSettings
 
 def calibrate_weight():
 
