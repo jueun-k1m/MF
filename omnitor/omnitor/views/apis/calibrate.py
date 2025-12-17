@@ -27,7 +27,7 @@ def calibrate_api(request):
             CalibrationData.objects.create(
                 timestamp = datetime.now(),
                 weight_real1 = data.get('weight_real1'),
-                weight_filtered1 = avg('weight')
+                weight_filtered1 = avg('total_weight')
             )
             return JsonResponse({'message': '무게1 저장 완료. 다음 무게를 입력해 주세요.'})
 
@@ -39,7 +39,7 @@ def calibrate_api(request):
 
             if target_row:
                 target_row.weight_real2 = data.get('weight_real2')
-                target_row.weight_filtered2 = avg('weight')
+                target_row.weight_filtered2 = avg('total_weight')
                 target_row.save()
                 return JsonResponse({'message': '무게2 저장 완료. 보정 설정을 저장해 주세요.'})
             else:
