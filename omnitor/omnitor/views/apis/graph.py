@@ -41,7 +41,7 @@ def graph_api(request):
         data = FinalData.objects.filter(
             created_at__range=(start_time, end_time)
         ).values('timestamp', 'air_temperature', 'air_humidity', 'co2', 'insolation', 'total_insolation', 'vpd', 
-                 'weight', 'irrigation', 'total_irrigation', 'total_drainage',
+                 'total_weight', 'irrigation', 'total_irrigation', 'total_drainage',
                  'water_temperature', 'ph', 'ec', 
                  'soil_temperature', 'soil_humidity', 'soil_ec', 'soil_ph')
 
