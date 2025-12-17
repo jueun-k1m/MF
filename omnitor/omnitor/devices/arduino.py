@@ -11,7 +11,7 @@ class DataPacket:
     air_humidity: float = 0.0
     co2: int = 0
     insolation: float = 0.0
-    weight_raw: int = 0
+    weight: int = 0
     ph_voltage: float = 0.0
     ec_voltage: float = 0.0
     water_temperature: float = 0.0
@@ -85,7 +85,7 @@ class ArduinoSerial:
                                 air_humidity=float(parts[1]),
                                 co2=int(float(parts[2])),
                                 insolation=float(parts[3]),
-                                weight_raw=int(float(parts[4])),
+                                weight=int(float(parts[4])),
                                 ph_voltage=float(parts[5]),
                                 ec_voltage=float(parts[6]),
                                 water_temperature=float(parts[7]),
