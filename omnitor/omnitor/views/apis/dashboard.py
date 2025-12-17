@@ -15,7 +15,7 @@ def dashboard_api(request):
     if request.method == 'GET':
         try:
             # 최신 데이터 1개 조회 (timestamp 기준 내림차순 정렬 후 첫 번째 or last())
-            latest_data = FinalData.objects.latest()
+            latest_data = FinalData.objects.latest('timestamp')
 
             # 데이터가 아예 없는 경우 예외 처리
             if latest_data is None:
@@ -23,6 +23,7 @@ def dashboard_api(request):
 
             # 이미 FinalData에 save_data에서 업로드함. 정리해서 json response로 반환만 하면 됨
             response_data = {
+                'status' : 'success', # JS 체크용
                 'timestamp': latest_data.timestamp.strftime('%Y-%m-%d %H:%M:%S'),
 
                 # 환경 데이터
@@ -30,13 +31,13 @@ def dashboard_api(request):
                 'air_humidity': latest_data.air_humidity,
                 'co2': latest_data.co2,
                 'insolation': latest_data.insolation,
-                # 'total_insolation': latest_data.total_insolation,
-                # 'vpd': latest_data.vpd,                           
+                # 'total_insolation': latest_data.total_insolation,    => 그래프에서만 표시. 대시보드에선 필요 없음
+                # 'vpd': latest_data.vpd,                              => 그래프에서만 표시. 대시보드에선 필요 없음
                 
                 # 함수량 및 관수/배액
-                'weight': latest_data.weight,
+                'total_weight': latest_data.total_weight,
                 'irrigation': latest_data.irrigation,             # 이번 텀의 관수량
-                # 'total_irrigation': latest_data.total_irrigation, # 오늘 누적 관수량
+                # 'total_irrigation': latest_data.total_irrigation,    => 그래프에서만 표시. 대시보드에선 필요 없음
                 'drainage': latest_data.total_drainage,           # 오늘 누적 배액량 total_drainage (tip_count * capacity)
 
                 # 배액 센서 데이터
