@@ -79,7 +79,7 @@
         <div class="control-group">
             <label class="fw-bold small text-muted"><i class="fas fa-compress-arrows-alt me-1"></i>간격:</label>
             <select id="time-unit-select" class="form-select form-select-sm">
-                <option value="">원본 (Raw)</option>
+                <option value="">기본</option>
                 <option value="1m">1분</option>
                 <option value="10m">10분</option>
                 <option value="30m">30분</option>
@@ -340,12 +340,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    function updateCharts(dataList) {
-        // 서버에서 받은 데이터(List of Dict)를 Chart.js 포맷({x: time, y: value})으로 변환
-        // timestamp 키가 pandas 처리 과정에서 'created_at'이 아니라 'timestamp'로 넘어오는지, 
-        // 혹은 reset_index로 인해 'created_at'인지 API 응답 확인 필요.
-        // 여기서는 API 코드 상 'timestamp'가 아니라 index reset 후 'created_at'으로 변환됨을 확인.
-        
+    function updateCharts(dataList) {        
         // 데이터가 비었을 때 예외처리
         if(!dataList || dataList.length === 0) {
             Object.values(charts).forEach(chart => {
@@ -357,7 +352,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         // 데이터 파싱 헬퍼 함수
         const parseData = (key) => dataList.map(item => ({
-            x: item.timestamp || item.created_at, // API 리턴값에 따라 유동적 대응
+            x: item.timestamp, // API 리턴값에 따라 유동적 대응
             y: item[key]
         }));
 
