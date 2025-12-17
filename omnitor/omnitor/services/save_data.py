@@ -35,7 +35,7 @@ def save_rawdata(arduino, soil):
             air_humidity=arduino_data.air_humidity,
             co2=int(arduino_data.co2),
             insolation=arduino_data.insolation,
-            weight=int(arduino_data.weight_raw),
+            weight=int(arduino_data.weight),
             ph=arduino_data.ph_voltage,
             ec=arduino_data.ec_voltage,
             water_temperature=arduino_data.water_temperature,
@@ -106,7 +106,6 @@ def save_finaldata():
                 })
 
             # ================ 누적 값 계산 ===============
-            # 怨쇨굅 ?곗씠????+ ?꾩옱 媛믪쑝濡?怨꾩궛
             agg_result = FinalData.objects.filter(timestamp__gte=today_start).aggregate(
                 sum_insol=Sum('insolation'),
                 sum_irrig=Sum('irrigation')
@@ -120,7 +119,7 @@ def save_finaldata():
             FinalData.objects.create(
                 timestamp=now,
                     
-                # ?섍꼍
+                # 환경
                 air_temperature=temp,
                 air_humidity=hum,
                 co2=filtered_data['co2'],
@@ -128,17 +127,18 @@ def save_finaldata():
                 total_insolation=total_insolation,
                 vpd=vpd,
 
-                # ?⑥닔??                weight=(cal_settings.weight_slope * current_weight) + cal_settings.weight_intercept,
+                # 함수율
+                total_weight=(cal_settings.weight_slope * current_weight) + cal_settings.weight_intercept,
                 irrigation=irrigation,
                 total_irrigation=total_irrigation,
                 total_drainage=raw_latest.tip_count * tip_capacity,
 
-                # 諛곗븸
+                # 배액
                 water_temperature=filtered_data['water_temperature'],
                 ph=(cal_settings.ph_slope * filtered_data['ph']) + cal_settings.ph_intercept,
                 ec=(cal_settings.ec_slope * filtered_data['ec']) + cal_settings.ec_intercept,
 
-                # ?좎뼇
+                # 토양  
                 soil_temperature=filtered_data['soil_temperature'],
                 soil_humidity=filtered_data['soil_humidity'],
                 soil_ec=filtered_data['soil_ec'],
@@ -147,8 +147,7 @@ def save_finaldata():
 
             print(f"[Saved] FinalData at {now.strftime('%H:%M:%S')}")
                 
-            # ?ㅼ쓬 猷⑦봽瑜??꾪빐 ?꾩옱 臾닿쾶 ???            prev_weight = current_weight
+            prev_weight = current_weight
 
     except Exception as e:
         print(f"[FinalData Error] {e}")
-        # ?먮윭 ?섎룄 猷⑦봽??怨꾩냽 ?뚭쾶 ??
