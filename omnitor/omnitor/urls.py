@@ -20,7 +20,7 @@ from . import views
 urlpatterns = [
     # ========== pages =============
     path('', views.pages.dashboard_view, name='dashboard_page'),
-    path('calibration/', views.pages.calibration_view, name='calibration_page'),
+    path('calibrate/', views.pages.calibrate_view, name='calibrate_page'),
     path('journal/', views.pages.journal_view, name='journal_page'),
     path('graph/', views.pages.graph_view, name='graph_page'),
 
