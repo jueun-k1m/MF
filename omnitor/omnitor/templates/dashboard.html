@@ -1,13 +1,13 @@
 {% extends 'base.html' %}
 {% load static %}
 
-{% block title %}대시보드 - Gomojang{% endblock %}
+{% block title %}??쒕낫??- Gomojang{% endblock %}
 
-{% block page_title %}실시간 모니터링{% endblock %}
+{% block page_title %}?ㅼ떆媛?紐⑤땲?곕쭅{% endblock %}
 
 {% block extra_css %}
 <style>
-    /* 대시보드 전용 스타일 */
+    /* ??쒕낫???꾩슜 ?ㅽ???*/
     .dashboard-card {
         border: none;
         border-radius: 12px;
@@ -22,6 +22,7 @@
     .card-header-custom {
         background-color: transparent;
         border-bottom: 1px solid #f0f0f0;
+        font-size: 20px;
         font-weight: 600;
         color: #555;
         padding: 15px;
@@ -39,7 +40,7 @@
         width: 180px;
         height: 180px;
     }
-    /* SVG 회전 (0도가 12시 방향이 되도록) */
+    /* SVG ?뚯쟾 (0?꾧? 12??諛⑺뼢???섎룄濡? */
     .progress-circle-container svg {
         transform: rotate(-90deg);
         width: 100%;
@@ -56,7 +57,7 @@
         stroke-linecap: round;
         transition: stroke-dashoffset 0.5s ease-out, stroke 0.3s ease;
     }
-    /* 텍스트 역회전 (정방향 유지) */
+    /* ?띿뒪????쉶??(?뺣갑???좎?) */
     .progress-text {
         transform: rotate(90deg);
         transform-origin: 91px 91px;
@@ -69,14 +70,14 @@
     .progress-unit {
         transform: rotate(90deg);
         transform-origin: 91px 120px;
-        font-size: 18px;
+        font-size: 22px;
         fill: #6c757d;
         text-anchor: middle;
         dominant-baseline: middle;
         font-weight: 500;
     }
     
-    /* 섹션 제목 스타일 */
+    /* ?뱀뀡 ?쒕ぉ ?ㅽ???*/
     .section-title {
         margin-top: 2rem;
         margin-bottom: 1rem;
@@ -94,16 +95,16 @@
     <div class="row mb-3">
         <div class="col-12 text-end">
             <span class="badge bg-light text-dark border">
-                <i class="fas fa-clock me-1"></i> Last Update: <span id="latest-timestamp">Loading...</span>
+                <i class="fas fa-clock me-1"></i> 留덉?留??낅뜲?댄듃: <span id="latest-timestamp">濡쒕뵫以?..</span>
             </span>
         </div>
     </div>
 
-    <h5 class="section-title">환경 (Environment)</h5>
+    <h5 class="section-title">?섍꼍 (Environment)</h5>
     <div class="row g-3">
         <div class="col-xl-3 col-lg-4 col-md-6">
             <div class="card dashboard-card h-100">
-                <div class="card-header-custom">온도</div>
+                <div class="card-header-custom text-center">?⑤룄 (째C)</div>
                 <div class="card-body-custom">
                     <div class="progress-circle-container">
                         <svg viewBox="-22.75 -22.75 227.5 227.5">
@@ -111,7 +112,6 @@
                             <circle id="inner-air_temperature" r="71" cx="91" cy="91" fill="#f8f9fa"></circle>
                             <circle class="progress-fg" r="81" cx="91" cy="91" id="bar-air_temperature" stroke-dasharray="509" stroke-dashoffset="509" stroke="#198754"></circle>
                             <text class="progress-text" x="91" y="85" id="text-air_temperature">-</text>
-                            <text class="progress-unit" x="91" y="115">°C</text>
                         </svg>
                     </div>
                 </div>
@@ -119,7 +119,7 @@
         </div>
         <div class="col-xl-3 col-lg-4 col-md-6">
             <div class="card dashboard-card h-100">
-                <div class="card-header-custom">습도</div>
+                <div class="card-header-custom text-center">?듬룄 (%)</div>
                 <div class="card-body-custom">
                     <div class="progress-circle-container">
                         <svg viewBox="-22.75 -22.75 227.5 227.5">
@@ -127,7 +127,6 @@
                             <circle id="inner-air_humidity" r="71" cx="91" cy="91" fill="#f8f9fa"></circle>
                             <circle class="progress-fg" r="81" cx="91" cy="91" id="bar-air_humidity" stroke-dasharray="509" stroke-dashoffset="509" stroke="#0dcaf0"></circle>
                             <text class="progress-text" x="91" y="85" id="text-air_humidity">-</text>
-                            <text class="progress-unit" x="91" y="115">%</text>
                         </svg>
                     </div>
                 </div>
@@ -135,7 +134,7 @@
         </div>
         <div class="col-xl-3 col-lg-4 col-md-6">
             <div class="card dashboard-card h-100">
-                <div class="card-header-custom">이산화탄소</div>
+                <div class="card-header-custom text-center">?댁궛?뷀깂??/div>
                 <div class="card-body-custom">
                     <div class="progress-circle-container">
                         <svg viewBox="-22.75 -22.75 227.5 227.5">
@@ -151,7 +150,7 @@
         </div>
         <div class="col-xl-3 col-lg-4 col-md-6">
             <div class="card dashboard-card h-100">
-                <div class="card-header-custom">일사량</div>
+                <div class="card-header-custom text-center">?쇱궗??/div>
                 <div class="card-body-custom">
                     <div class="progress-circle-container">
                         <svg viewBox="-22.75 -22.75 227.5 227.5">
@@ -159,7 +158,7 @@
                             <circle id="inner-insolation" r="71" cx="91" cy="91" fill="#f8f9fa"></circle>
                             <circle class="progress-fg" r="81" cx="91" cy="91" id="bar-insolation" stroke-dasharray="509" stroke-dashoffset="509" stroke="#ffc107"></circle>
                             <text class="progress-text" x="91" y="85" id="text-insolation">-</text>
-                            <text class="progress-unit" x="91" y="115">W/m²</text>
+                            <text class="progress-unit" x="91" y="115">W/m짼</text>
                         </svg>
                     </div>
                 </div>
@@ -167,11 +166,11 @@
         </div>
     </div>
 
-    <h5 class="section-title">무게 & 배액 (Weight & Water)</h5>
+    <h5 class="section-title">臾닿쾶 & 諛곗븸 (Weight & Water)</h5>
     <div class="row g-3">
         <div class="col-xl-4 col-md-6">
             <div class="card dashboard-card h-100">
-                <div class="card-header-custom">총 무게</div>
+                <div class="card-header-custom text-center">珥?臾닿쾶</div>
                 <div class="card-body-custom">
                     <div class="progress-circle-container">
                         <svg viewBox="-22.75 -22.75 227.5 227.5">
@@ -187,7 +186,7 @@
         </div>
         <div class="col-xl-4 col-md-6">
             <div class="card dashboard-card h-100">
-                <div class="card-header-custom">급수량</div>
+                <div class="card-header-custom text-center">湲됱닔??/div>
                 <div class="card-body-custom">
                     <div class="progress-circle-container">
                         <svg viewBox="-22.75 -22.75 227.5 227.5">
@@ -203,7 +202,7 @@
         </div>
         <div class="col-xl-4 col-md-6">
             <div class="card dashboard-card h-100">
-                <div class="card-header-custom">배액량</div>
+                <div class="card-header-custom text-center">諛곗븸??/div>
                 <div class="card-body-custom">
                     <div class="progress-circle-container">
                         <svg viewBox="-22.75 -22.75 227.5 227.5">
@@ -219,134 +218,153 @@
         </div>
     </div>
 
-    <div class="row g-3 mt-2">
-        <div class="col-lg-6">
-            <h5 class="section-title mt-2">배액 분석 (Drainage)</h5>
-            <div class="row g-3">
-                <div class="col-md-4 col-sm-6">
-                    <div class="card dashboard-card h-100">
-                        <div class="card-header-custom text-center">수온</div>
-                        <div class="card-body-custom">
-                            <div class="progress-circle-container" style="width: 140px; height: 140px;">
-                                <svg viewBox="-22.75 -22.75 227.5 227.5">
-                                    <circle class="progress-bg" r="81" cx="91" cy="91"></circle>
-                                    <circle id="inner-water_temperature" r="71" cx="91" cy="91" fill="#f8f9fa"></circle>
-                                    <circle class="progress-fg" r="81" cx="91" cy="91" id="bar-water_temperature" stroke-dasharray="509" stroke-dashoffset="509" stroke="#20c997"></circle>
-                                    <text class="progress-text" x="91" y="85" id="text-water_temperature" style="font-size: 32px;">-</text>
-                                    <text class="progress-unit" x="91" y="115" style="font-size: 16px;">°C</text>
-                                </svg>
-                            </div>
-                        </div>
+    <h5 class="section-title">諛곗븸 (Drainage)</h5>
+    <div class="row g-3">
+        <div class="col-xl-4 col-md-6">
+            <div class="card dashboard-card h-100">
+                <div class="card-header-custom text-center">?섏삩</div>
+                <div class="card-body-custom">
+                    <div class="progress-circle-container">
+                        <svg viewBox="-22.75 -22.75 227.5 227.5">
+                            <circle class="progress-bg" r="81" cx="91" cy="91"></circle>
+                            <circle id="inner-water_temperature" r="71" cx="91" cy="91" fill="#f8f9fa"></circle>
+                            
+                            <circle class="progress-fg" r="81" cx="91" cy="91" id="bar-water_temperature" 
+                                    stroke-dasharray="509" stroke-dashoffset="509" stroke="#20c997"></circle>
+                            
+                            <text class="progress-text" x="91" y="85" id="text-water_temperature">-</text>
+                            <text class="progress-unit" x="91" y="115">째C</text>
+                        </svg>
                     </div>
                 </div>
-                <div class="col-md-4 col-sm-6">
-                    <div class="card dashboard-card h-100">
-                        <div class="card-header-custom text-center">pH</div>
-                        <div class="card-body-custom">
-                            <div class="progress-circle-container" style="width: 140px; height: 140px;">
-                                <svg viewBox="-22.75 -22.75 227.5 227.5">
-                                    <circle class="progress-bg" r="81" cx="91" cy="91"></circle>
-                                    <circle id="inner-ph_calibrated" r="71" cx="91" cy="91" fill="#f8f9fa"></circle>
-                                    <circle class="progress-fg" r="81" cx="91" cy="91" id="bar-ph_calibrated" stroke-dasharray="509" stroke-dashoffset="509" stroke="#d63384"></circle>
-                                    <text class="progress-text" x="91" y="85" id="text-ph_calibrated" style="font-size: 32px;">-</text>
-                                    <text class="progress-unit" x="91" y="115" style="font-size: 16px;">pH</text>
-                                </svg>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                <div class="col-md-4 col-sm-6">
-                    <div class="card dashboard-card h-100">
-                        <div class="card-header-custom text-center">EC</div>
-                        <div class="card-body-custom">
-                            <div class="progress-circle-container" style="width: 140px; height: 140px;">
-                                <svg viewBox="-22.75 -22.75 227.5 227.5">
-                                    <circle class="progress-bg" r="81" cx="91" cy="91"></circle>
-                                    <circle id="inner-ec_calibrated" r="71" cx="91" cy="91" fill="#f8f9fa"></circle>
-                                    <circle class="progress-fg" r="81" cx="91" cy="91" id="bar-ec_calibrated" stroke-dasharray="509" stroke-dashoffset="509" stroke="#6f42c1"></circle>
-                                    <text class="progress-text" x="91" y="85" id="text-ec_calibrated" style="font-size: 32px;">-</text>
-                                    <text class="progress-unit" x="91" y="115" style="font-size: 14px;">uS/cm</text>
-                                </svg>
-                            </div>
-                        </div>
+            </div>
+        </div>
+    
+        <div class="col-xl-4 col-md-6">
+            <div class="card dashboard-card h-100">
+                <div class="card-header-custom text-center">諛곗븸 pH</div>
+                <div class="card-body-custom">
+                    <div class="progress-circle-container">
+                        <svg viewBox="-22.75 -22.75 227.5 227.5">
+                            <circle class="progress-bg" r="81" cx="91" cy="91"></circle>
+                            <circle id="inner-ph_calibrated" r="71" cx="91" cy="91" fill="#f8f9fa"></circle>
+                            
+                            <circle class="progress-fg" r="81" cx="91" cy="91" id="bar-ph_calibrated" 
+                                    stroke-dasharray="509" stroke-dashoffset="509" stroke="#d63384"></circle>
+                            
+                            <text class="progress-text" x="91" y="85" id="text-ph_calibrated">-</text>
+                            <text class="progress-unit" x="91" y="115">pH</text>
+                        </svg>
                     </div>
                 </div>
             </div>
         </div>
 
-        <div class="col-lg-6">
-            <h5 class="section-title mt-2">토양 (Soil)</h5>
-            <div class="row g-3">
-                <div class="col-md-6 col-sm-6">
-                    <div class="card dashboard-card h-100">
-                        <div class="card-body-custom justify-content-between px-4">
-                            <div>
-                                <h6 class="text-muted mb-1">토양 온도</h6>
-                                <h3 id="text-soil_temperature">-</h3>
-                                <small class="text-muted">°C</small>
-                            </div>
-                             <div class="progress-circle-container" style="width: 80px; height: 80px;">
-                                <svg viewBox="-22.75 -22.75 227.5 227.5">
-                                    <circle class="progress-bg" r="81" cx="91" cy="91" stroke-width="25"></circle>
-                                    <circle class="progress-fg" r="81" cx="91" cy="91" id="bar-soil_temperature" stroke-dasharray="509" stroke-dashoffset="509" stroke="#d63384" stroke-width="25"></circle>
-                                </svg>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                <div class="col-md-6 col-sm-6">
-                    <div class="card dashboard-card h-100">
-                        <div class="card-body-custom justify-content-between px-4">
-                            <div>
-                                <h6 class="text-muted mb-1">토양 습도</h6>
-                                <h3 id="text-soil_humidity">-</h3>
-                                <small class="text-muted">%</small>
-                            </div>
-                            <div class="progress-circle-container" style="width: 80px; height: 80px;">
-                                <svg viewBox="-22.75 -22.75 227.5 227.5">
-                                    <circle class="progress-bg" r="81" cx="91" cy="91" stroke-width="25"></circle>
-                                    <circle class="progress-fg" r="81" cx="91" cy="91" id="bar-soil_humidity" stroke-dasharray="509" stroke-dashoffset="509" stroke="#0dcaf0" stroke-width="25"></circle>
-                                </svg>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                 <div class="col-md-6 col-sm-6">
-                    <div class="card dashboard-card h-100">
-                        <div class="card-body-custom justify-content-between px-4">
-                            <div>
-                                <h6 class="text-muted mb-1">토양 EC</h6>
-                                <h3 id="text-soil_conductivity">-</h3>
-                                <small class="text-muted">uS/cm</small>
-                            </div>
-                            <div class="progress-circle-container" style="width: 80px; height: 80px;">
-                                <svg viewBox="-22.75 -22.75 227.5 227.5">
-                                    <circle class="progress-bg" r="81" cx="91" cy="91" stroke-width="25"></circle>
-                                    <circle class="progress-fg" r="81" cx="91" cy="91" id="bar-soil_conductivity" stroke-dasharray="509" stroke-dashoffset="509" stroke="#fd7e14" stroke-width="25"></circle>
-                                </svg>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                 <div class="col-md-6 col-sm-6">
-                    <div class="card dashboard-card h-100">
-                        <div class="card-body-custom justify-content-between px-4">
-                            <div>
-                                <h6 class="text-muted mb-1">토양 pH</h6>
-                                <h3 id="text-soil_ph">-</h3>
-                                <small class="text-muted">pH</small>
-                            </div>
-                             <div class="progress-circle-container" style="width: 80px; height: 80px;">
-                                <svg viewBox="-22.75 -22.75 227.5 227.5">
-                                    <circle class="progress-bg" r="81" cx="91" cy="91" stroke-width="25"></circle>
-                                    <circle class="progress-fg" r="81" cx="91" cy="91" id="bar-soil_ph" stroke-dasharray="509" stroke-dashoffset="509" stroke="#20c997" stroke-width="25"></circle>
-                                </svg>
-                            </div>
-                        </div>
+        <div class="col-xl-4 col-md-6">
+            <div class="card dashboard-card h-100">
+                <div class="card-header-custom text-center">諛곗븸 EC</div>
+                <div class="card-body-custom">
+                    <div class="progress-circle-container">
+                        <svg viewBox="-22.75 -22.75 227.5 227.5">
+                            <circle class="progress-bg" r="81" cx="91" cy="91"></circle>
+                            <circle id="inner-ec_calibrated" r="71" cx="91" cy="91" fill="#f8f9fa"></circle>
+                            
+                            <circle class="progress-fg" r="81" cx="91" cy="91" id="bar-ec_calibrated" 
+                                    stroke-dasharray="509" stroke-dashoffset="509" stroke="#6f42c1"></circle>
+                            
+                            <text class="progress-text" x="91" y="85" id="text-ec_calibrated">-</text>
+                            <text class="progress-unit" x="91" y="115">uS/cm</text>
+                        </svg>
                     </div>
                 </div>
             </div>
         </div>
+    </div>
+
+        <h5 class="section-title">?좎뼇 (Soil)</h5>
+        <div class="row g-3">
+            <div class="col-xl-3 col-lg-4 col-md-6">
+                <div class="card dashboard-card h-100">
+                    <div class="card-header-custom text-center">?좎뼇 ?⑤룄</div>
+                    <div class="card-body-custom">
+                        <div class="progress-circle-container">
+                            <svg viewBox="-22.75 -22.75 227.5 227.5">
+                                <circle class="progress-bg" r="81" cx="91" cy="91"></circle>
+                                <circle id="inner-soil_temperature" r="71" cx="91" cy="91" fill="#f8f9fa"></circle>
+                                
+                                <circle class="progress-fg" r="81" cx="91" cy="91" id="bar-soil_temperature" 
+                                        stroke-dasharray="509" stroke-dashoffset="509" stroke="#d63384"></circle>
+                                
+                                <text class="progress-text" x="91" y="85" id="text-soil_temperature">-</text>
+                                <text class="progress-unit" x="91" y="115">째C</text>
+                            </svg>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-xl-3 col-lg-4 col-md-6">
+                <div class="card dashboard-card h-100">
+                    <div class="card-header-custom text-center">?좎뼇 ?듬룄</div>
+                    <div class="card-body-custom">
+                        <div class="progress-circle-container">
+                            <svg viewBox="-22.75 -22.75 227.5 227.5">
+                                <circle class="progress-bg" r="81" cx="91" cy="91"></circle>
+                                <circle id="inner-soil_humidity" r="71" cx="91" cy="91" fill="#f8f9fa"></circle>
+                                
+                                <circle class="progress-fg" r="81" cx="91" cy="91" id="bar-soil_humidity" 
+                                        stroke-dasharray="509" stroke-dashoffset="509" stroke="#0dcaf0"></circle>
+                                
+                                <text class="progress-text" x="91" y="85" id="text-soil_humidity">-</text>
+                                <text class="progress-unit" x="91" y="115">%</text>
+                            </svg>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-xl-3 col-lg-4 col-md-6">
+            <div class="card dashboard-card h-100">
+                <div class="card-header-custom text-center">?좎뼇 EC</div>
+                <div class="card-body-custom">
+                    <div class="progress-circle-container">
+                        <svg viewBox="-22.75 -22.75 227.5 227.5">
+                            <circle class="progress-bg" r="81" cx="91" cy="91"></circle>
+                            <circle id="inner-soil_conductivity" r="71" cx="91" cy="91" fill="#f8f9fa"></circle>
+                            
+                            <circle class="progress-fg" r="81" cx="91" cy="91" id="bar-soil_conductivity" 
+                                    stroke-dasharray="509" stroke-dashoffset="509" stroke="#fd7e14"></circle>
+                            
+                            <text class="progress-text" x="91" y="85" id="text-soil_conductivity">-</text>
+                            <text class="progress-unit" x="91" y="115">uS/cm</text>
+                        </svg>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-xl-3 col-lg-4 col-md-6">
+            <div class="card dashboard-card h-100">
+                <div class="card-header-custom text-center">?좎뼇 pH</div>
+                <div class="card-body-custom">
+                    <div class="progress-circle-container">
+                        <svg viewBox="-22.75 -22.75 227.5 227.5">
+                            <circle class="progress-bg" r="81" cx="91" cy="91"></circle>
+                            <circle id="inner-soil_ph" r="71" cx="91" cy="91" fill="#f8f9fa"></circle>
+                            
+                            <circle class="progress-fg" r="81" cx="91" cy="91" id="bar-soil_ph" 
+                                    stroke-dasharray="509" stroke-dashoffset="509" stroke="#20c997"></circle>
+                            
+                            <text class="progress-text" x="91" y="85" id="text-soil_ph">-</text>
+                            <text class="progress-unit" x="91" y="115">pH</text>
+                        </svg>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+            
+        
     </div>
 </div>
 {% endblock %}
@@ -355,10 +373,10 @@
 <script>
 document.addEventListener('DOMContentLoaded', () => {
 
-    // Django CSRF Token (혹시 나중에 POST 요청이 필요할 때를 대비)
+    // Django CSRF Token (?뱀떆 ?섏쨷??POST ?붿껌???꾩슂???뚮? ?鍮?
     const csrfToken = document.querySelector('meta[name="csrf-token"]') ? document.querySelector('meta[name="csrf-token"]').getAttribute('content') : '';
 
-    // --- API 호출 함수 ---
+    // --- API ?몄텧 ?⑥닔 ---
     async function fetchWithTimeout(url, options = {}, timeout = 5000) {
         const controller = new AbortController();
         const id = setTimeout(() => controller.abort(), timeout);
@@ -371,7 +389,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    // --- 원형 게이지 업데이트 함수 ---
+    // --- ?먰삎 寃뚯씠吏 ?낅뜲?댄듃 ?⑥닔 ---
     function updateProgressCircle(field, value, min, max, defaultColor) {
         const textEl = document.getElementById(`text-${field}`);
         const barEl = document.getElementById(`bar-${field}`);
@@ -387,16 +405,16 @@ document.addEventListener('DOMContentLoaded', () => {
         // let innerFillColor = '#f8f9fa';
 
         if (typeof value === 'number' && !isNaN(value)) {
-            // innerFillColor = '#e9ecef'; // 데이터 수신 시 배경 살짝 진하게 (선택사항)
+            // innerFillColor = '#e9ecef'; // ?곗씠???섏떊 ??諛곌꼍 ?댁쭩 吏꾪븯寃?(?좏깮?ы빆)
             
-            // 색상 동적 변경 로직 (pH, 습도 등)
+            // ?됱긽 ?숈쟻 蹂寃?濡쒖쭅 (pH, ?듬룄 ??
             if (field === 'ph_calibrated' || field === 'soil_ph') {
                 if ((value > 0 && value < 5.0) || (value > 7.0 && value <= 14)) strokeColor = '#dc3545'; // Danger
                 else if ((value >= 5.0 && value < 5.5) || (value > 6.5 && value <= 7.0)) strokeColor = '#ffc107'; // Warning
                 else strokeColor = '#198754'; // Success
             }
             
-            // 값 범위 계산
+            // 媛?踰붿쐞 怨꾩궛
             const clampedValue = Math.max(min, Math.min(value, max));
             if (max - min !== 0) {
                 percentage = (clampedValue - min) / (max - min);
@@ -404,13 +422,12 @@ document.addEventListener('DOMContentLoaded', () => {
                 percentage = 1;
             }
             
-            // 텍스트 포맷팅
-            if (field.includes('ph')) displayValue = value.toFixed(2);
+            // ?띿뒪???щ㎎??            if (field.includes('ph')) displayValue = value.toFixed(2);
             else if (value > 100 || value < 1) displayValue = value.toFixed(0);
             else displayValue = value.toFixed(1);
         }
 
-        // Stroke Offset 업데이트
+        // Stroke Offset ?낅뜲?댄듃
         const offset = (1 - percentage) * circumference;
         
         textEl.textContent = displayValue;
@@ -419,7 +436,7 @@ document.addEventListener('DOMContentLoaded', () => {
         // if(innerEl) innerEl.style.fill = innerFillColor;
     }
 
-    // --- 데이터 폴링 함수 ---
+    // --- ?곗씠???대쭅 ?⑥닔 ---
     async function updateLatestData() {
         try {
             const response = await fetchWithTimeout('/dashboard_api/');
@@ -430,25 +447,25 @@ document.addEventListener('DOMContentLoaded', () => {
             
             document.getElementById('latest-timestamp').textContent = data.timestamp;
             
-            // 센서 설정값 (최소/최대/기본색상) - 색상은 Bootstrap 색상 코드 참조
+            // ?쇱꽌 ?ㅼ젙媛?(理쒖냼/理쒕?/湲곕낯?됱긽) - ?됱긽? Bootstrap ?됱긽 肄붾뱶 李몄“
             const sensorConfig = {
-                // 환경
+                // ?섍꼍
                 'air_temperature': { min: -20, max: 80, color: '#198754' }, // Success Green
                 'air_humidity': { min: 0, max: 100, color: '#0dcaf0' },     // Info Cyan
                 'co2': { min: 0, max: 5000, color: '#6c757d' },             // Secondary Gray
                 'insolation': { min: 0, max: 1300, color: '#ffc107' },      // Warning Yellow
                 
-                // 무게/수분
+                // 臾닿쾶/?섎텇
                 'weight_calibrated': { min: 0, max: 80000, color: '#6610f2' }, // Indigo
                 'irrigation_amount': { min: 0, max: 1000, color: '#0d6efd' },  // Primary Blue
                 'tip_total': { min: 0, max: 5000, color: '#fd7e14' },          // Orange
 
-                // 배액
+                // 諛곗븸
                 'water_temperature': { min: -20, max: 80, color: '#20c997' },  // Teal
                 'ph_calibrated': { min: 0, max: 14, color: '#d63384' },        // Pink
                 'ec_calibrated': { min: 0, max: 5000, color: '#6f42c1' },      // Purple
 
-                // 토양
+                // ?좎뼇
                 'soil_temperature': { min: -20, max: 80, color: '#d63384' },
                 'soil_humidity': { min: 0, max: 100, color: '#0dcaf0' },
                 'soil_conductivity': { min: 0, max: 5000, color: '#fd7e14' },
@@ -467,7 +484,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    // 초기 실행 및 5초 주기 반복
+    // 珥덇린 ?ㅽ뻾 諛?5珥?二쇨린 諛섎났
     updateLatestData();
     setInterval(updateLatestData, 5000);
 });
