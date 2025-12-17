@@ -4,7 +4,7 @@ import json
 from datetime import datetime, date
 from django.http import JsonResponse, HttpResponseBadRequest, HttpResponseNotAllowed, HttpResponse
 from django.templatetags.static import static 
-from models import FarmJournal
+from omnitor.models import FarmJournal
 
 
 def journal_api(request):
