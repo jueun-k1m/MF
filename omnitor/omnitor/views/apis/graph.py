@@ -1,96 +1,71 @@
 # gemini
 
-import pandas as pd
-from datetime import timedelta
-from django.http import JsonResponse, HttpResponse
-from django.utils import timezone
-from django.utils.dateparse import parse_datetime
-from omnitor.models import FinalData
+import json
+from django.http import JsonResponse
+from omnitor.models import FinalData  # 모델 경로 확인 필요
 
-def graph_api(request):
+def dashboard_api(request):
+    
+    """
+    [API] 대시보드 데이터 조회
+    가장 최근 저장된 FinalData 1개를 가져와 반환합니다.
+    """
+    
+    # ======== GET: 최신 데이터 조회 ========
     if request.method == 'GET':
-
-        # 시작 날짜, 끝 날짜, 시간 범위, 시간 단위, format (csv or not) 받기
-        start_date_str = request.GET.get('start_date')
-        end_date_str = request.GET.get('end_date')
-        time_range = request.GET.get('time_range')
-        time_unit = request.GET.get('time_unit')
-        fmt = request.GET.get('format')
-
-        end_time = timezone.now()
-        start_time = end_time - timedelta(hours=1) # 디폴트: 1시간
-
-
-        # ======= 시간 범위 설정 =======
         try:
-            # 시간 범위 직접 선택  
-            if start_date_str and end_date_str:
-                start_time = parse_datetime(start_date_str)
-                end_time = parse_datetime(end_date_str)
+            # 최신 데이터 1개 조회 (timestamp 기준 내림차순 정렬 후 첫 번째 or last())
+            latest_data = FinalData.objects.latest('timestamp')
 
-            # 시간 범위 4가지 선택 중 하나
-            elif time_range:
-                if time_range == '10m': start_time = end_time - timedelta(minutes=10)
-                elif time_range == '1h': start_time = end_time - timedelta(hours=1)
-                elif time_range == '1d': start_time = end_time - timedelta(days=1)
-                elif time_range == '7d': start_time = end_time - timedelta(days=7)
-        except (ValueError, TypeError):
-            return JsonResponse({'error': '파라미터 오류'}, status=400)
-        
-        # DB에서 시간 범위 안에 있는 데이터 가져오기
-        data = FinalData.objects.filter(
-            created_at__range=(start_time, end_time)
-        ).values('timestamp', 'air_temperature', 'air_humidity', 'co2', 'insolation', 'total_insolation', 'vpd', 
-                 'total_weight', 'irrigation', 'total_irrigation', 'total_drainage',
-                 'water_temperature', 'ph', 'ec', 
-                 'soil_temperature', 'soil_humidity', 'soil_ec', 'soil_ph')
+            # 데이터가 아예 없는 경우 예외 처리
+            if latest_data is None:
+                return JsonResponse({'message': '아직 수집된 데이터가 없습니다.'}, status=204)
 
-        data_list = list(data)
+            # 이미 FinalData에 save_data에서 업로드함. 정리해서 json response로 반환만 하면 됨
+            response_data = {
+                'status' : 'success', # JS 체크용
+                'timestamp': latest_data.timestamp.strftime('%Y-%m-%d %H:%M:%S'),
 
-        if not data_list:
-            return JsonResponse({'error': '데이터 (리스트) 없음'}, status=404)
-        
-
-        # ======= 시간 단위 설정 (pandas 사용) =======
-        # pandas 시간 단위 freq로 주기 설정
-        try:
-            data_pandas = pd.DataFrame(data_list) # pandas에서 데이터프레임 만들기
-            data_pandas['timestamp'] = pd.to_datetime(data_pandas['timestamp'])
-
-            # 시간 단위 설정
-            freq = None
-            if time_unit == '1m' : freq = '1min'
-            elif time_unit == '10m': freq = '10min'
-            elif time_unit == '30m' : freq = '30min'
-            elif time_unit == '1h': freq = '1h'
-            elif time_unit == '3h': freq = '3h'
-
-            if freq:
-                target_times = pd.date_range(start=start_time, end=end_time, freq=freq)
-                tolerance_limit = pd.Timedelta(freq)/2
-
-                dp_selected = data_pandas.reindex(target_times, method='nearest', tolerance=tolerance_limit)
+                # 환경 데이터
+                'air_temperature': latest_data.air_temperature,
+                'air_humidity': latest_data.air_humidity,
+                'co2': latest_data.co2,
+                'insolation': latest_data.insolation,
+                # 'total_insolation': latest_data.total_insolation,    => 그래프에서만 표시. 대시보드에선 필요 없음
+                # 'vpd': latest_data.vpd,                              => 그래프에서만 표시. 대시보드에선 필요 없음
                 
-                # 매칭되는 데이터가 없어서 빈 값이 된 행은 제거
-                dp_selected.dropna(inplace=True)
+                # 함수량 및 관수/배액
+                'total_weight': latest_data.total_weight,
+                'irrigation': latest_data.irrigation,             # 이번 텀의 관수량
+                # 'total_irrigation': latest_data.total_irrigation,    => 그래프에서만 표시. 대시보드에선 필요 없음
+                'drainage': latest_data.total_drainage,           # 오늘 누적 배액량 total_drainage (tip_count * capacity)
 
-            else:
-                # 단위 선택 안 했으면 원본 그대로
-                dp_selected = data_pandas
+                # 배액 센서 데이터
+                'water_temperature': latest_data.water_temperature,
+                'ph': latest_data.ph,
+                'ec': latest_data.ec,
+                
+                # 토양 센서 데이터
+                'soil_temperature': latest_data.soil_temperature,
+                'soil_humidity': latest_data.soil_humidity,
+                'soil_ph': latest_data.soil_ph,
+                'soil_ec': latest_data.soil_ec
+            }
+            
+            return JsonResponse(response_data) # 200 OK
 
-            # 사용자가 csv로 export 하고 싶다면
-            if fmt == 'csv':
-                response = HttpResponse(content_type='text/csv')
-                response['Content-Disposition'] = 'attachment; filename="sensor_data.csv"'
-                dp_selected.to_csv(path_or_buf=response, encoding='utf-8-sig', float_format='%.2f', index_label='Time')
-                return response
-            else:
-                dp_selected.reset_index(inplace=True)
-                # 'index' 칼럼 이름을 'created_at'으로 복구
-                dp_selected.rename(columns={'index': 'created_at'}, inplace=True)
-                result_data = dp_selected.to_dict('records')
-                return JsonResponse({'data': result_data}, safe=False)
-
+        except FinalData.DoesNotExist:
+            return JsonResponse({
+                'status': 'error',
+                'message': '아직 수집된 데이터가 없습니다.',
+                'timestamp': '-'
+            }, status=200)
+        
         except Exception as e:
-            print(f"Error: {e}")
-            return JsonResponse({'error': str(e)}, status=500)
+            # 서버 내부 에러 로깅
+            print(f"[API Error] dashboard_api: {e}")
+            return JsonResponse({'error': '서버 내부 오류가 발생했습니다.'}, status=500)
+
+    # GET 이외의 요청 거부
+    else:
+        return JsonResponse({'error': 'Method not allowed'}, status=405)
