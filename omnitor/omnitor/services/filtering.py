@@ -1,5 +1,3 @@
-# help from gemini
-
 from omnitor.models import RawData
 from django.forms.models import model_to_dict
 
