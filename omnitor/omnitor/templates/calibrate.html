@@ -219,201 +219,133 @@
 document.addEventListener('DOMContentLoaded', () => {
 
     const csrfToken = document.querySelector('input[name="csrfmiddlewaretoken"]')?.value;
-    
-    // 현재 수온을 저장할 변수 (기본값 25.0)
     let currentWaterTemp = 25.0; 
 
     // --- 수온 데이터 실시간 가져오기 ---
     async function fetchWaterTemp() {
         try {
-            // Dashboard API를 재사용하여 수온 데이터를 가져옴
             const response = await fetch('/dashboard_api/');
             if(response.ok) {
                 const data = await response.json();
                 if(data.water_temperature !== undefined && data.water_temperature !== null) {
                     currentWaterTemp = parseFloat(data.water_temperature);
-                    // UI 업데이트
                     document.getElementById('current-water-temp').textContent = currentWaterTemp.toFixed(1) + " °C";
                 }
             }
-        } catch(e) {
-            console.error("수온 데이터 가져오기 실패:", e);
-        }
+        } catch(e) { console.error("수온 가져오기 실패:", e); }
     }
-
-    // 1. 초기 실행 및 5초 주기 반복
     fetchWaterTemp();
     setInterval(fetchWaterTemp, 5000);
-
 
     // --- 공통 API 요청 함수 ---
     async function sendCalibration(action, payload = {}) {
         try {
             const bodyData = { action: action, ...payload };
-            
             const response = await fetch('/calibrate_api/', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
-                    'X-CSRFToken': csrfToken
+                    'X-CSRFToken': '{{ csrf_token }}' // Django 템플릿 태그 사용 권장
                 },
                 body: JSON.stringify(bodyData)
             });
-            
             const result = await response.json();
-            
             if (response.ok) {
-                showToast(result.message || '성공적으로 처리되었습니다.');
-                return { success: true, message: result.message };
+                showToast(result.message || '완료되었습니다.');
+                return { success: true };
             } else {
                 alert("오류: " + (result.error || "알 수 없는 오류"));
                 return { success: false };
             }
-
         } catch (error) {
-            console.error(error);
-            alert("네트워크 통신 오류가 발생했습니다.");
+            alert("네트워크 오류가 발생했습니다.");
             return { success: false };
         }
     }
 
-    // --- 1. 무게 센서 로직 ---
+    // --- 1. 무게 센서 (변수명: weight_real1, weight_real2) ---
     document.getElementById('btn-weight1').addEventListener('click', async () => {
         const val = document.getElementById('weight-real1').value;
-        if(!val) return alert("무게 값을 입력하세요.");
-
+        if(!val) return alert("값을 입력하세요.");
         const res = await sendCalibration('calibrate_weight1', { weight_real1: val });
         if(res.success) {
-            document.getElementById('res-weight1').textContent = `✔ 저장됨: ${val}g`;
-            document.getElementById('btn-weight1').disabled = true;
+            document.getElementById('res-weight1').textContent = `✔ 무게1 저장됨`;
             document.getElementById('btn-weight2').disabled = false;
-            document.getElementById('btn-weight2').classList.replace('btn-secondary', 'btn-primary');
         }
     });
 
     document.getElementById('btn-weight2').addEventListener('click', async () => {
         const val = document.getElementById('weight-real2').value;
-        if(!val) return alert("무게 값을 입력하세요.");
-
+        if(!val) return alert("값을 입력하세요.");
         const res = await sendCalibration('calibrate_weight2', { weight_real2: val });
         if(res.success) {
-            document.getElementById('res-weight2').textContent = `✔ 저장됨: ${val}g`;
-            document.getElementById('btn-weight2').disabled = true;
+            document.getElementById('res-weight2').textContent = `✔ 무게2 저장됨`;
             document.getElementById('btn-weight-save').disabled = false;
         }
     });
 
-    document.getElementById('btn-weight-save').addEventListener('click', async () => {
-        const res = await sendCalibration('save_weight_calibration');
-        if(res.success) {
-            alert("무게 보정이 완료되었습니다!");
-            location.reload();
-        }
-    });
-
-
-    // --- 2. pH 센서 로직 (실시간 수온 사용) ---
+    // --- 2. pH 센서 (주의: 백엔드 필드명이 ph_water_temperature1로 통일됨) ---
     document.getElementById('btn-ph1').addEventListener('click', async () => {
         const val = document.getElementById('ph-real1').value;
-        if(!val) return alert("pH 값을 입력하세요.");
-        
-        // 현재 수온(currentWaterTemp)을 함께 전송
         const res = await sendCalibration('calibrate_ph1', { 
             ph_real1: val, 
-            ph_water_temperature1: currentWaterTemp 
+            ph_water_temperature1: currentWaterTemp // 백엔드 필드명 일치
         });
-        
         if(res.success) {
-            document.getElementById('res-ph1').textContent = `✔ 측정 완료 (pH ${val} @ ${currentWaterTemp.toFixed(1)}°C)`;
-            document.getElementById('btn-ph1').disabled = true;
+            document.getElementById('res-ph1').textContent = `✔ pH 7.0 측정완료`;
             document.getElementById('btn-ph2').disabled = false;
-            document.getElementById('btn-ph2').classList.replace('btn-secondary', 'btn-primary');
         }
     });
 
     document.getElementById('btn-ph2').addEventListener('click', async () => {
         const val = document.getElementById('ph-real2').value;
-        if(!val) return alert("pH 값을 입력하세요.");
-
         const res = await sendCalibration('calibrate_ph2', { 
             ph_real2: val, 
-            ph_water_temperature2: currentWaterTemp 
+            ph_water_temperature1: currentWaterTemp // 백엔드 코드에서 ph_water_temperature1을 받음
         });
-
         if(res.success) {
-            document.getElementById('res-ph2').textContent = `✔ 측정 완료 (pH ${val} @ ${currentWaterTemp.toFixed(1)}°C)`;
-            document.getElementById('btn-ph2').disabled = true;
+            document.getElementById('res-ph2').textContent = `✔ pH 4.0 측정완료`;
             document.getElementById('btn-ph-save').disabled = false;
         }
     });
 
-    document.getElementById('btn-ph-save').addEventListener('click', async () => {
-        const res = await sendCalibration('save_ph_calibration');
-        if(res.success) {
-            alert("pH 보정이 완료되었습니다!");
-            location.reload();
-        }
-    });
-
-
-    // --- 3. EC 센서 로직 (실시간 수온 사용) ---
+    // --- 3. EC 센서 (주의: 백엔드 필드명이 ec_water_temperature1로 통일됨) ---
     document.getElementById('btn-ec1').addEventListener('click', async () => {
         const val = document.getElementById('ec-real1').value;
-        if(!val) return alert("EC 값을 입력하세요.");
-        
         const res = await sendCalibration('calibrate_ec1', { 
             ec_real1: val, 
             ec_water_temperature1: currentWaterTemp 
         });
-
         if(res.success) {
-            document.getElementById('res-ec1').textContent = `✔ 측정 완료 (${val} uS @ ${currentWaterTemp.toFixed(1)}°C)`;
-            document.getElementById('btn-ec1').disabled = true;
+            document.getElementById('res-ec1').textContent = `✔ EC Low 측정완료`;
             document.getElementById('btn-ec2').disabled = false;
-            document.getElementById('btn-ec2').classList.replace('btn-secondary', 'btn-primary');
         }
     });
 
     document.getElementById('btn-ec2').addEventListener('click', async () => {
         const val = document.getElementById('ec-real2').value;
-        if(!val) return alert("EC 값을 입력하세요.");
-
         const res = await sendCalibration('calibrate_ec2', { 
             ec_real2: val, 
-            ec_water_temperature2: currentWaterTemp 
+            ec_water_temperature1: currentWaterTemp 
         });
-
         if(res.success) {
-            document.getElementById('res-ec2').textContent = `✔ 측정 완료 (${val} uS @ ${currentWaterTemp.toFixed(1)}°C)`;
-            document.getElementById('btn-ec2').disabled = true;
+            document.getElementById('res-ec2').textContent = `✔ EC High 측정완료`;
             document.getElementById('btn-ec-save').disabled = false;
         }
     });
 
-    document.getElementById('btn-ec-save').addEventListener('click', async () => {
-        const res = await sendCalibration('save_ec_calibration');
-        if(res.success) {
-            alert("EC 보정이 완료되었습니다!");
-            location.reload();
-        }
+    // --- 보정값 최종 적용 버튼들 ---
+    document.getElementById('btn-weight-save').addEventListener('click', () => sendCalibration('save_weight_calibration'));
+    document.getElementById('btn-ph-save').addEventListener('click', () => sendCalibration('save_ph_calibration'));
+    document.getElementById('btn-ec-save').addEventListener('click', () => sendCalibration('save_ec_calibration'));
+    document.getElementById('btn-save-all').addEventListener('click', () => {
+        if(confirm("전체 보정 설정을 저장하시겠습니까?")) sendCalibration('save_all_calibration');
     });
 
-
-    // --- 전체 저장 버튼 ---
-    document.getElementById('btn-save-all').addEventListener('click', async () => {
-        if(!confirm("모든 센서의 현재 보정 상태를 저장하시겠습니까?")) return;
-        const res = await sendCalibration('save_all_calibration');
-        if(res.success) {
-            alert("모든 설정이 저장되었습니다.");
-        }
-    });
-
-    // Toast 표시 함수
     function showToast(msg) {
         const toastEl = document.getElementById('calibToast');
         document.getElementById('toast-msg').textContent = msg;
-        const toast = new bootstrap.Toast(toastEl);
-        toast.show();
+        new bootstrap.Toast(toastEl).show();
     }
 });
 </script>
