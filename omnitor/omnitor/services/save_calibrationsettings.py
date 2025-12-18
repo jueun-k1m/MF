@@ -12,15 +12,10 @@ def calibrate_weight():
     weight_filtered2: 측정된 무게 센서 값 2 (g)
     """
 
-    calib_data = CalibrationData.objects.filter(
-        weight_real1__isnull=False,
-        weight_filtered1__isnull=False,
-        weight_real2__isnull=False,
-        weight_filtered2__isnull=False
-    ).last()
+    calib_data = CalibrationData.objects.last()
 
     if not calib_data:
-        print("보정할 데이터가 없습니다.")
+        print("[1] No CalibrationData")
         return
 
     try:
@@ -29,10 +24,14 @@ def calibrate_weight():
         # b = y1 - m*x1
         weight_intercept = calib_data.weight_real1 - (weight_slope * calib_data.weight_filtered1)
 
-        CalibrationSettings.objects.create(
+        print("[2] Calibration calculation complete")
+
+        CalibrationSettings.objects.update_or_create(
             weight_slope= weight_slope,
             weight_intercept=weight_intercept
         )
+        
+        print ("[3] CalibrationSettings saved")
     except ZeroDivisionError:
         return None, None
 
@@ -52,14 +51,9 @@ def calibrate_ph():
     temperature2: 측정된 온도 센서 값 2 (°C)
     """
 
-    calib_data = CalibrationData.objects.filter(
-        ph_real1__isnull=False,
-        ph_filtered1__isnull=False,
-        ph_real2__isnull=False,
-        ph_filtered2__isnull=False
-    ).last()
+    calib_data = CalibrationData.objects.last()
     if not calib_data:
-        print("보정할 데이터가 없습니다.")
+        print("[4] No CalibrationData")
         return
 
     try:
@@ -70,11 +64,14 @@ def calibrate_ph():
         # ph 2점 보정
         ph_slope = (ph_temp2 - ph_temp1) / (calib_data.ph_filtered2 - calib_data.ph_filtered1)
         ph_intercept = ph_temp1 - (ph_slope * calib_data.ph_filtered1)
+        print("[5] Calibration calculation complete")
 
-        CalibrationSettings.objects.create(
+        CalibrationSettings.objects.update_or_create(
             ph_slope=ph_slope,
             ph_intercept=ph_intercept
         )
+        print ("[6] CalibrationSettings saved")
+
     except ZeroDivisionError:
         return None, None
     
@@ -93,14 +90,9 @@ def calibrate_ec():
     temperature2: 측정된 온도 센서 값 2 (°C)
     """
 
-    calib_data = CalibrationData.objects.filter(
-        ec_real1__isnull=False,
-        ec_filtered1__isnull=False,
-        ec_real2__isnull=False,
-        ec_filtered2__isnull=False
-    ).last()
+    calib_data = CalibrationData.objects.last()
     if not calib_data:
-        print("보정할 데이터가 없습니다.")
+        print("[7] No CalibrationData")
         return
 
     try:
@@ -111,12 +103,13 @@ def calibrate_ec():
         # ec 2점 보정
         ec_slope = (ec_temp2 - ec_temp1) / (calib_data.ec_filtered2 - calib_data.ec_filtered1)
         ec_intercept = ec_temp1 - (ec_slope * calib_data.ec_filtered1)
-
+        print("[8] Calibration calculation complete")
         # DB에 저장
-        CalibrationSettings.objects.create(
-             ec_slope=ec_slope,
+        CalibrationSettings.objects.update_or_create(
+            ec_slope=ec_slope,
             ec_intercept=ec_intercept
         )
+        print ("[9] CalibrationSettings saved")
 
     except ZeroDivisionError:
         return None, None
