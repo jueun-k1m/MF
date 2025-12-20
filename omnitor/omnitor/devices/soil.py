@@ -28,11 +28,13 @@ class SoilSensor:
         self.timeout = 1.0
 
     def find_port(self):
-        ports = serial.tools.list_ports.comports()
-        for port in ports:
-            if ("FT232" in port.description or "UART" in port.description or "USB" in port.description) and "Arduino" not in port.description:
-                return port.device
-        return None
+        #ports = serial.tools.list_ports.comports()
+        #for port in ports:
+        #    if ("serial" in port.description):
+                # return port.device
+        #        return "/dev/ttyUSB0"
+        #print('Cannot find soil port')
+        return "/dev/Soil"
     
     def start(self):
         with self.lock:
@@ -40,11 +42,14 @@ class SoilSensor:
                 return True
             
             self.port = self.find_port()
+            print(f"[Soil] 포트 연결 시도: {self.port}")
+            
             if not self.port:
+                print("[Soil] 포트를 찾지 못했습니다.")
                 return False
             
             try:
-                print(f"[Soil] 포트 연결: {self.port}")
+                print("[Soil] 포트 연결 성공!")
                 self.instrument = minimalmodbus.Instrument(self.port, self.slave_address)
                 self.instrument.serial.baudrate = self.baudrate
                 self.instrument.serial.bytesize = self.bytesize
@@ -59,18 +64,20 @@ class SoilSensor:
                 self.instrument = None
                 return False
 
-    def read(self):
+    def get_current_data(self):
         with self.lock:
             if not self.instrument:
-                if not self.connect():
+                if not self.start():
                     return None
             
             try:
+                #print("Try to read register")
                 values = self.instrument.read_registers(0, 4, functioncode=3)
+                #print("Done")
                 soil_temperature = values[0] / 10.0 
                 soil_humidity = values[1] / 10.0
                 soil_ec = values[2]
-                soil_ph = values[3] / 10.0         
+                soil_ph = values[3] / 10.0 
 
                 return SoilData(
                     soil_temperature=soil_temperature,
