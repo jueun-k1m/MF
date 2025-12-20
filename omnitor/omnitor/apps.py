@@ -1,28 +1,48 @@
 from django.apps import AppConfig
 import os
+import threading
+import time
+import schedule 
+
+from .devices.arduino import SerialSingleton
+from .devices.soil import SoilSensorSingleton
+
+def run_scheduler_loop():
+    print("[Debug] Run Scheduler Loop", flush=True)
+    while True:
+        schedule.run_pending()
+        time.sleep(1)
 
 class OmnitorConfig(AppConfig):
     name = "omnitor"
 
     def ready(self):
-        # runserver autoreload 2번 실행 방지
         if os.environ.get("RUN_MAIN") != "true":
             return
 
-        from .devices.arduino import SerialSingleton
-        from .devices.soil import SoilSensorSingleton
-
         serial = SerialSingleton.instance()
-        serial.start()
         soil = SoilSensorSingleton.instance()
+        serial.start()
         soil.start()
 
-        # rawdata랑 finaldata 저장하기
-        from .services import schedule, save_data
-        schedule.add_time_interval_shedule("save_rawdata", 0.1, save_data.save_rawdata(serial, soil))
-        schedule.add_time_interval_shedule("save_finaldata", 57, save_data.save_finaldata)
+        from .services import schedule as my_schedule_service, save_data
         
+        my_schedule_service.add_time_interval_schedule(
+            "save_rawdata", 
+            1, 
+            lambda: save_data.save_rawdata(serial, soil)
+        )
+        
+        my_schedule_service.add_time_interval_schedule(
+            "save_finaldata", 
+            60, 
+            save_data.save_finaldata
+        )
+        
+        scheduler_thread = threading.Thread(target=run_scheduler_loop, daemon=True)
+        scheduler_thread.start()
+        print(">>> [System] Data Collector Scheduler Started!")
 
-        # 카메라
-        from .devices import camera
-        camera.run_scheduler
+        #rom .devices import camera
+        #camera_thread = threading.Thread(target=camera.run_scheduler, daemon=True)
+        #camera_thread.start()
