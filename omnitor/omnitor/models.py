@@ -94,8 +94,6 @@ class CalibrationSettings(models.Model):
     y = mx + b 식으로 보정 설정 적용
     """
 
-    timestamp = models.DateTimeField(auto_now_add=True)
-
     # 무게 보정
     weight_slope = models.FloatField(default=0)
     weight_intercept = models.FloatField(default=0)
@@ -108,41 +106,41 @@ class CalibrationSettings(models.Model):
     ec_slope = models.FloatField(default=0)
     ec_intercept = models.FloatField(default=0)
 
+    def save(self, *args, **kwargs):
+        # This forces the ID to always be 1
+        self.id = 1
+        super(CalibrationSettings, self).save(*args, **kwargs)
+
+    @classmethod
+    def load(cls):
+        # Helper method to always get the first row or create it if missing
+        obj, created = cls.objects.get_or_create(id=1)
+        return obj
+
     def __str__(self):
-        return "보정 설정"
+        return "Calibration Settings (ID: 1)"
     
     
 class CalibrationData(models.Model):
+    timestamp = models.DateTimeField(auto_now_add=True)
 
-    """
-    보정 설정에서 사용한 실제 값과 raw -> 필터링 된 값 데이터 모델
-    (데이터 보관용)
-    """
+    weight_real1 = models.FloatField(default=0, null=True, blank=True)
+    weight_real2 = models.FloatField(default=0, null=True, blank=True)
+    weight_filtered1 = models.FloatField(default=0, null=True, blank=True)
+    weight_filtered2 = models.FloatField(default=0, null=True, blank=True)
 
+    ph_real1 = models.FloatField(default=0, null=True, blank=True)
+    ph_real2 = models.FloatField(default=0, null=True, blank=True)
+    ph_filtered1 = models.FloatField(default=0, null=True, blank=True)
+    ph_filtered2 = models.FloatField(default=0, null=True, blank=True)
+    ph_water_temperature1 = models.FloatField(default=25, null=True, blank=True)
+    ph_water_temperature2 = models.FloatField(default=25, null=True, blank=True)
 
-    timestamp=models.DateTimeField(auto_now_add=True)
+    ec_real1 = models.FloatField(default=0, null=True, blank=True)
+    ec_real2 = models.FloatField(default=0, null=True, blank=True)
+    ec_filtered1 = models.FloatField(default=0, null=True, blank=True)
+    ec_filtered2 = models.FloatField(default=0, null=True, blank=True)
 
-    weight_real1=models.FloatField(default=0)
-    weight_real2=models.FloatField(default=0)
-    weight_filtered1=models.FloatField(default=0)
-    weight_filtered2=models.FloatField(default=0)
-
-    ph_real1=models.FloatField(default=0)
-    ph_real2=models.FloatField(default=0)
-    ph_filtered1=models.FloatField(default=0)
-    ph_filtered2=models.FloatField(default=0)
-    ph_water_temperature1=models.FloatField(default=0)
-    ph_water_temperature2=models.FloatField(default=0)
-
-    ec_real1=models.FloatField(default=0)
-    ec_real2=models.FloatField(default=0)
-
-    ec_filtered1=models.FloatField(default=0)
-    ec_filtered2=models.FloatField(default=0)
-
-    ec_water_temperature1=models.FloatField(default=0)
-    ec_water_temperature2=models.FloatField(default=0)
-
-    def __str__(self):
-        return "실제 값"
-    
+    # 특히 이 부분들!
+    ec_water_temperature1 = models.FloatField(default=25, null=True, blank=True)
+    ec_water_temperature2 = models.FloatField(default=25, null=True, blank=True)
