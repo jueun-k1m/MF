@@ -1,0 +1,391 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}그래프 분석 - Gomojang{% endblock %}
+{% block page_title %}그래프 분석 (Data Analysis){% endblock %}
+
+{% block extra_css %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@2.9.4/dist/Chart.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/moment@2.29.1/moment.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-moment@0.1.1/dist/chartjs-adapter-moment.min.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+
+<style>
+    .chart-container {
+        position: relative;
+        height: 350px;
+        width: 100%;
+        margin-bottom: 2rem;
+        background: #fff;
+        padding: 15px;
+        border-radius: 8px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+        border: 1px solid #e9ecef;
+    }
+    .filter-bar {
+        background-color: #fff;
+        padding: 15px;
+        border-radius: 8px;
+        border: 1px solid #dee2e6;
+        margin-bottom: 20px;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+        align-items: center;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.03);
+    }
+    .control-group {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        margin-right: 15px;
+    }
+    .form-select-sm, .form-control-sm {
+        min-width: 120px;
+    }
+    /* 로딩 오버레이 */
+    #loading-overlay {
+        position: fixed;
+        top: 0; left: 0; width: 100%; height: 100%;
+        background: rgba(255,255,255,0.7);
+        z-index: 9999;
+        display: none;
+        justify-content: center;
+        align-items: center;
+        flex-direction: column;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid p-0">
+    
+    <div class="filter-bar">
+        <div class="control-group">
+            <label class="fw-bold small text-muted"><i class="far fa-calendar-alt me-1"></i>기간:</label>
+            <select id="time-range-select" class="form-select form-select-sm">
+                <option value="10m">지난 10분</option>
+                <option value="1h" selected>지난 1시간</option>
+                <option value="1d">지난 24시간</option>
+                <option value="7d">지난 7일</option>
+                <option value="custom">직접 선택</option>
+            </select>
+        </div>
+
+        <div class="control-group" id="custom-date-group" style="display:none;">
+            <input type="text" id="date-range-picker" class="form-control form-control-sm" placeholder="시작일 ~ 종료일 선택">
+        </div>
+
+        <div class="control-group">
+            <label class="fw-bold small text-muted"><i class="fas fa-compress-arrows-alt me-1"></i>간격:</label>
+            <select id="time-unit-select" class="form-select form-select-sm">
+                <option value="">기본</option>
+                <option value="1m">1분</option>
+                <option value="10m">10분</option>
+                <option value="30m">30분</option>
+                <option value="1h">1시간</option>
+                <option value="3h">3시간</option>
+            </select>
+        </div>
+
+        <div class="ms-auto d-flex gap-2">
+            <button id="btn-refresh" class="btn btn-sm btn-primary">
+                <i class="fas fa-sync-alt me-1"></i> 조회
+            </button>
+            <button id="btn-download" class="btn btn-sm btn-outline-success">
+                <i class="fas fa-file-csv me-1"></i> CSV 저장
+            </button>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-12">
+            <h6 class="fw-bold text-secondary ps-2 border-start border-4 border-primary mb-2">무게 및 수분량 (Weight & Water)</h6>
+            <div class="chart-container">
+                <canvas id="weightChart"></canvas>
+            </div>
+        </div>
+
+        <div class="col-12">
+            <h6 class="fw-bold text-secondary ps-2 border-start border-4 border-success mb-2">환경 센서 (Environment)</h6>
+            <div class="chart-container">
+                <canvas id="envChart"></canvas>
+            </div>
+        </div>
+
+        <div class="col-12">
+            <h6 class="fw-bold text-secondary ps-2 border-start border-4 border-info mb-2">배액 센서 (Drainage)</h6>
+            <div class="chart-container">
+                <canvas id="waterChart"></canvas>
+            </div>
+        </div>
+
+        <div class="col-12">
+            <h6 class="fw-bold text-secondary ps-2 border-start border-4 border-warning mb-2">토양 센서 (Soil)</h6>
+            <div class="chart-container">
+                <canvas id="soilChart"></canvas>
+            </div>
+        </div>
+    </div>
+
+</div>
+
+<div id="loading-overlay">
+    <div class="spinner-border text-primary" role="status" style="width: 3rem; height: 3rem;">
+        <span class="visually-hidden">Loading...</span>
+    </div>
+    <div class="mt-2 fw-bold text-secondary">데이터를 불러오는 중입니다...</div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+<script src="https://cdn.jsdelivr.net/npm/flatpickr/dist/l10n/ko.js"></script>
+
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    
+    let charts = {}; // 차트 인스턴스 저장소
+    let dateRangePicker; // 달력 인스턴스
+
+    // --- 1. 차트 초기화 (빈 차트 생성) ---
+    function initCharts() {
+        const commonOptions = { 
+            responsive: true, 
+            maintainAspectRatio: false,
+            scales: {
+                xAxes: [{
+                    type: 'time',
+                    time: { 
+                        tooltipFormat: 'YYYY-MM-DD HH:mm',
+                        displayFormats: { minute: 'HH:mm', hour: 'MM/DD HH:mm', day: 'MM/DD' }
+                    },
+                    ticks: { autoSkip: true, maxRotation: 0 }
+                }]
+            },
+            tooltips: { mode: 'index', intersect: false },
+            hover: { mode: 'nearest', intersect: true }
+        };
+
+        // 1-1. 무게 차트
+        charts.weight = new Chart(document.getElementById('weightChart').getContext('2d'), {
+            type: 'line',
+            data: { datasets: [
+                { label: '총 무게 (g)', borderColor: '#6610f2', yAxisID: 'y_weight', fill: false, data: [] },
+                { label: '급수량 (mL)', borderColor: '#0d6efd', yAxisID: 'y_vol', fill: false, borderDash: [5, 5], data: [] },
+                { label: '배액량 (mL)', borderColor: '#fd7e14', yAxisID: 'y_vol', fill: false, data: [] }
+            ]},
+            options: { ...commonOptions, 
+                scales: {
+                    ...commonOptions.scales,
+                    yAxes: [
+                        { id: 'y_weight', position: 'left', ticks: { fontColor: '#6610f2' }, scaleLabel: { display: true, labelString: 'Weight (g)' } },
+                        { id: 'y_vol', position: 'right', ticks: { fontColor: '#0d6efd' }, gridLines: { drawOnChartArea: false }, scaleLabel: { display: true, labelString: 'Volume (mL)' } }
+                    ]
+                }
+            }
+        });
+
+        // 1-2. 환경 차트
+        charts.env = new Chart(document.getElementById('envChart').getContext('2d'), {
+            type: 'line',
+            data: { datasets: [
+                { label: '온도 (°C)', borderColor: '#198754', yAxisID: 'y_temp', fill: false, data: [] },
+                { label: '습도 (%)', borderColor: '#0dcaf0', yAxisID: 'y_hum', fill: false, data: [] },
+                { label: 'CO2 (ppm)', borderColor: '#6c757d', yAxisID: 'y_co2', fill: false, hidden: true, data: [] }, // CO2는 기본 숨김
+                { label: '일사량 (W/m²)', borderColor: '#ffc107', yAxisID: 'y_rad', fill: false, data: [] }
+            ]},
+            options: { ...commonOptions, 
+                scales: {
+                    ...commonOptions.scales,
+                    yAxes: [
+                        { id: 'y_temp', position: 'left', ticks: { fontColor: '#198754' } },
+                        { id: 'y_hum', position: 'right', ticks: { fontColor: '#0dcaf0' }, gridLines: { drawOnChartArea: false } },
+                        { id: 'y_co2', position: 'right', ticks: { fontColor: '#6c757d' }, gridLines: { drawOnChartArea: false } },
+                        { id: 'y_rad', position: 'left', ticks: { fontColor: '#ffc107' }, gridLines: { drawOnChartArea: false } }
+                    ]
+                }
+            }
+        });
+
+        // 1-3. 배액 차트
+        charts.water = new Chart(document.getElementById('waterChart').getContext('2d'), {
+            type: 'line',
+            data: { datasets: [
+                { label: 'pH', borderColor: '#d63384', yAxisID: 'y_ph', fill: false, data: [] },
+                { label: 'EC (uS/cm)', borderColor: '#6f42c1', yAxisID: 'y_ec', fill: false, data: [] },
+                { label: '수온 (°C)', borderColor: '#20c997', yAxisID: 'y_temp', fill: false, data: [] }
+            ]},
+            options: { ...commonOptions, 
+                scales: {
+                    ...commonOptions.scales,
+                    yAxes: [
+                        { id: 'y_ph', position: 'left', ticks: { fontColor: '#d63384', min: 0, max: 14 } },
+                        { id: 'y_ec', position: 'right', ticks: { fontColor: '#6f42c1' }, gridLines: { drawOnChartArea: false } },
+                        { id: 'y_temp', position: 'left', ticks: { fontColor: '#20c997' }, gridLines: { drawOnChartArea: false }, offset: true }
+                    ]
+                }
+            }
+        });
+
+        // 1-4. 토양 차트
+        charts.soil = new Chart(document.getElementById('soilChart').getContext('2d'), {
+            type: 'line',
+            data: { datasets: [
+                { label: '토양 온도 (°C)', borderColor: '#d63384', yAxisID: 'y_temp', fill: false, data: [] },
+                { label: '토양 습도 (%)', borderColor: '#0dcaf0', yAxisID: 'y_hum', fill: false, data: [] },
+                { label: '토양 EC (uS/cm)', borderColor: '#fd7e14', yAxisID: 'y_ec', fill: false, data: [] },
+                { label: '토양 pH', borderColor: '#20c997', yAxisID: 'y_ph', fill: false, data: [] }
+            ]},
+            options: { ...commonOptions, 
+                scales: {
+                    ...commonOptions.scales,
+                    yAxes: [
+                        { id: 'y_temp', position: 'left', ticks: { fontColor: '#d63384' } },
+                        { id: 'y_hum', position: 'right', ticks: { fontColor: '#0dcaf0' }, gridLines: { drawOnChartArea: false } },
+                        { id: 'y_ec', position: 'right', ticks: { fontColor: '#fd7e14' }, gridLines: { drawOnChartArea: false } },
+                        { id: 'y_ph', position: 'left', ticks: { fontColor: '#20c997', min: 0, max: 14 }, gridLines: { drawOnChartArea: false }, offset: true }
+                    ]
+                }
+            }
+        });
+    }
+
+    // --- 2. 컨트롤 이벤트 리스너 ---
+    const rangeSelect = document.getElementById('time-range-select');
+    const customGroup = document.getElementById('custom-date-group');
+    
+    // 기간 선택 변경 시
+    rangeSelect.addEventListener('change', () => {
+        if (rangeSelect.value === 'custom') {
+            customGroup.style.display = 'flex';
+            if (!dateRangePicker) {
+                // 달력 초기화 (오늘 ~ 내일)
+                dateRangePicker = flatpickr("#date-range-picker", {
+                    mode: "range",
+                    enableTime: true,
+                    dateFormat: "Y-m-d H:i",
+                    locale: "ko",
+                    defaultDate: [new Date().fp_incr(-1), new Date()] 
+                });
+            }
+        } else {
+            customGroup.style.display = 'none';
+            fetchData(); // 즉시 조회
+        }
+    });
+
+    // 조회 버튼 클릭
+    document.getElementById('btn-refresh').addEventListener('click', fetchData);
+
+    // CSV 다운로드 버튼 클릭
+    document.getElementById('btn-download').addEventListener('click', () => {
+        const url = buildQueryUrl('csv');
+        if (url) window.location.href = url;
+    });
+
+
+    // --- 3. 데이터 조회 및 업데이트 ---
+    function buildQueryUrl(format = 'json') {
+        const range = rangeSelect.value;
+        const unit = document.getElementById('time-unit-select').value;
+        let params = new URLSearchParams();
+
+        if (format === 'csv') params.append('format', 'csv');
+        if (unit) params.append('time_unit', unit);
+
+        if (range === 'custom') {
+            if (!dateRangePicker || dateRangePicker.selectedDates.length < 2) {
+                alert("시작일과 종료일을 모두 선택해주세요.");
+                return null;
+            }
+            // Flatpickr는 Date 객체를 반환하므로 ISO 문자열로 변환
+            const start = dateRangePicker.selectedDates[0].toISOString();
+            const end = dateRangePicker.selectedDates[1].toISOString();
+            params.append('start_date', start);
+            params.append('end_date', end);
+        } else {
+            params.append('time_range', range);
+        }
+        
+        // graph_api는 GET 파라미터를 받음
+        return '/graph_api/';
+    }
+
+    async function fetchData() {
+        const url = buildQueryUrl('json');
+        if (!url) return;
+
+        document.getElementById('loading-overlay').style.display = 'flex'; // 로딩 시작
+
+        try {
+            const response = await fetch(url);
+            const result = await response.json();
+
+            if (response.ok) {
+                updateCharts(result.data);
+            } else {
+                console.warn(result.error || "데이터 없음");
+                // 차트 초기화 (빈 데이터)
+                updateCharts([]); 
+                if(result.error !== '데이터 (리스트) 없음') alert("조회 실패: " + result.error);
+            }
+
+        } catch (error) {
+            console.error("Fetch error:", error);
+            alert("네트워크 오류가 발생했습니다.");
+        } finally {
+            document.getElementById('loading-overlay').style.display = 'none'; // 로딩 끝
+        }
+    }
+
+    function updateCharts(dataList) {        
+        // 데이터가 비었을 때 예외처리
+        if(!dataList || dataList.length === 0) {
+            Object.values(charts).forEach(chart => {
+                chart.data.datasets.forEach(ds => ds.data = []);
+                chart.update();
+            });
+            return;
+        }
+
+        // 데이터 파싱 헬퍼 함수
+        const parseData = (key) => dataList.map(item => ({
+            x: item.timestamp, // API 리턴값에 따라 유동적 대응
+            y: item[key]
+        }));
+
+        // 1. 무게 차트
+        charts.weight.data.datasets[0].data = parseData('total_weight');
+        charts.weight.data.datasets[1].data = parseData('irrigation');
+        charts.weight.data.datasets[2].data = parseData('total_drainage');
+        charts.weight.update();
+
+        // 2. 환경 차트
+        charts.env.data.datasets[0].data = parseData('air_temperature');
+        charts.env.data.datasets[1].data = parseData('air_humidity');
+        charts.env.data.datasets[2].data = parseData('co2');
+        charts.env.data.datasets[3].data = parseData('insolation');
+        charts.env.update();
+
+        // 3. 배액 차트
+        charts.water.data.datasets[0].data = parseData('ph');
+        charts.water.data.datasets[1].data = parseData('ec');
+        charts.water.data.datasets[2].data = parseData('water_temperature');
+        charts.water.update();
+
+        // 4. 토양 차트
+        charts.soil.data.datasets[0].data = parseData('soil_temperature');
+        charts.soil.data.datasets[1].data = parseData('soil_humidity');
+        charts.soil.data.datasets[2].data = parseData('soil_ec');
+        charts.soil.data.datasets[3].data = parseData('soil_ph');
+        charts.soil.update();
+    }
+
+    // --- 실행 ---
+    initCharts();
+    fetchData(); // 페이지 로드 시 기본값(1시간)으로 조회
+});
+</script>
+{% endblock %}
