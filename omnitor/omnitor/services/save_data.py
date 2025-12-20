@@ -1,22 +1,11 @@
 import os
 import sys
 import time
-import threading
 import django
-from datetime import datetime
 
-current_dir = os.path.dirname(os.path.abspath(__file__))
-root_dir = os.path.dirname(current_dir)
-sys.path.append(root_dir)
-
-os.environ.setdefault("DJANGO_SETTINGS_MODULE", "omnitor.settings")
-django.setup()
-
-from django.omnitor.omnitor.models.models import RawData, CalibrationSettings, FinalData
 from django.db import connection, close_old_connections
 from django.db.models import Sum
 from django.utils import timezone
-
 
 from .filtering import maf_all
 
@@ -24,140 +13,185 @@ from .filtering import maf_all
 prev_weight = 0
 tip_capacity = 5
 
-def save_rawdata(arduino_data, soil_data):
+def save_rawdata(arduino, soil):
 
     """
-    [Thread 1] 센서 데이터를 읽어 RawData에 저장
+    센서 데이터를 읽어 RawData에 저장
     """
-    
-    while True:
-        try:
-            if arduino_data and soil_data:
-                now = datetime.now()
+
+    print(f"[rawdata] save_rawdata start {timezone.now()}", flush=True)
+
+    from omnitor.models import RawData
+
+    #print("[DEBUG] imported RawData", flush=True)
+
+    try:
+        #print("[DEBUG] trying", flush=True)
+        close_old_connections()
+        #print("[DEBUG] closed old connections", flush=True)
+
+        arduino_data = arduino.get_current_data()
+        #print("[DEBUG] got arduino data", flush=True)
+        
+        soil_data = soil.get_current_data()
+
+        
+
+        
+        #print("[DEBUG] got soil data", flush=True)
+
+        if not arduino_data or not soil_data:
+            #print("[DEBUG] no arduino or no soil data", flush=True)
+            return
+        
+        now = timezone.now()
                 
-                RawData.objects.create(
-                    timestamp=now,
-                    air_temperature=arduino_data.air_temperature,
-                    air_humidity=arduino_data.air_humidity,
-                    co2=int(arduino_data.co2),
-                    insolation=arduino_data.insolation,
-                    weight=int(arduino_data.weight_raw),
-                    ph=arduino_data.ph_voltage,
-                    ec=arduino_data.ec_voltage,
-                    water_temperature=arduino_data.water_temperature,
-                    tip_count=int(arduino_data.tip_count),
-                    
-                    soil_temperature=soil_data.soil_temperature,
-                    soil_humidity=soil_data.soil_humidity,
-                    soil_ec=soil_data.soil_ec,
-                    soil_ph=soil_data.soil_ph
-                )
+        RawData.objects.create(
+            timestamp=now,
+            air_temperature=arduino_data.air_temperature,
+            air_humidity=arduino_data.air_humidity,
+            co2=int(arduino_data.co2),
+            insolation=arduino_data.insolation,
+            weight=int(arduino_data.weight),
+            ph=arduino_data.ph_voltage,
+            ec=arduino_data.ec_voltage,
+            water_temperature=arduino_data.water_temperature,
+            tip_count=int(arduino_data.tip_count),
             
-        except Exception as e:
-            print(f"[RawData Error] {e}")
-            time.sleep(1)
+            soil_temperature=soil_data.soil_temperature,
+            soil_humidity=soil_data.soil_humidity,
+            soil_ec=soil_data.soil_ec,
+            soil_ph=soil_data.soil_ph
+        )
+
+        #print(f"[DEBUG] RawData DB save complete: {now.strftime('%H:%M:%S')}", flush=True)
+            
+    except Exception as e:
+        print(f"[RawData Error] {e}")
+        time.sleep(1)
 
 def save_finaldata():
-
     """
-    [Thread 2] RawData를 가공하여 FinalData에 저장
+    RawData -> 필터링 & 보정 -> FinalData
     """
-    
-    global prev_weight # 전역 변수 사용 명시
 
-    while True:
+    print(f"[save_final] save_finaldata start {timezone.now()}", flush=True)
+
+    global prev_weight
+    from omnitor.models import RawData, CalibrationSettings, FinalData
+    from . import save_calibrationsettings
+
+    try:
+        close_old_connections() 
+        now = timezone.now()
+        today_start = now.replace(hour=0, minute=0, second=0, microsecond=0)
+
         try:
-            # DB 연결 리셋
-            close_old_connections() 
+            raw_latest = RawData.objects.latest('timestamp')
+            print("[finaldata] retrieving raw data.")
+        except RawData.DoesNotExist:
+            print("[finaldata] RawData does not exist.")
+            return
+
+        filtered_data = maf_all()
+        print("[finaldata] Filtering data.")
+
+
+        cal_settings = CalibrationSettings.objects.get(id=1)
+        print(f"[5] load calibration settings successful: {cal_settings.__dict__}")
+        
+        print("[6] saving calib settings")
+
+        if not filtered_data:
+            print("[finaldata] No filtered data.")
+            filtered_data = {
+                'air_temperature': raw_latest.air_temperature,
+                'air_humidity': raw_latest.air_humidity,
+                'co2': raw_latest.co2,
+                'insolation': raw_latest.insolation,
+                'weight': raw_latest.weight,
+                'water_temperature': raw_latest.water_temperature,
+                'ph': raw_latest.ph,
+                'ec': raw_latest.ec,
+                'soil_temperature': raw_latest.soil_temperature,
+                'soil_humidity': raw_latest.soil_humidity,
+                'soil_ec': raw_latest.soil_ec,
+                'soil_ph': raw_latest.soil_ph
+            }
+
+        print(f"filtered ec: {filtered_data.get('ec')}")
+
+
+
+        temp = filtered_data.get('air_temperature', 0) or 0
+        hum = filtered_data.get('air_humidity', 0) or 0
+        
+        vpd = 0
+        if temp and hum:
+             vpd = ((0.6107 * 10 ** (7.5 * temp / (237.3 + temp))) * (1 - (hum / 100)))
+
+        current_weight = filtered_data.get('weight', 0) or 0
+        irrigation = 0
+        
+        if prev_weight > 0 and current_weight > prev_weight + 100:
+            irrigation = current_weight - prev_weight
             
-            now = timezone.now()
-            today_start = now.replace(hour=0, minute=0, second=0, microsecond=0)
+        
+        if cal_settings:
+            print(f"[finaldata] load calibration settings successful: {cal_settings.__dict__}")
+        if not cal_settings:
+            print("[finaldata] no calibration settings")
+            class MockSettings:
+                weight_slope = 1
+                weight_intercept = 0
+                ph_slope = 1
+                ph_intercept = 0
+                ec_slope = 1
+                ec_intercept = 0
+            cal_settings = MockSettings
 
-            # 이동평균 필터 적용 데이터 가져오기 (DB RawData last 가져와서 -> 이평필 적용 -> 반환)
-            filtered_data = maf_all()
+
+        print(f"calibrated ec: {(cal_settings.ec_slope * (filtered_data.get('ec') or 0)) + cal_settings.ec_intercept}")
+
+
+        agg_result = FinalData.objects.filter(timestamp__gte=today_start).aggregate(
+            sum_insol=Sum('insolation'),
+            sum_irrig=Sum('irrigation')
+        )
+        
+        total_insolation = (agg_result['sum_insol'] or 0) + (filtered_data.get('insolation', 0) or 0)
+        total_irrigation = (agg_result['sum_irrig'] or 0) + irrigation
+
+        # FinalData
+        FinalData.objects.create(
+            timestamp=now,
             
-            # RawData에서 tip_count 같은 누적값 가져오기 위해 최신값 조회
-            try:
-                raw_latest = RawData.objects.latest('timestamp')
-            except RawData.DoesNotExist:
-                print("아직 RawData가 없습니다.")
-                continue
+            air_temperature=temp,
+            air_humidity=hum,
+            co2=filtered_data.get('co2'),
+            insolation=filtered_data.get('insolation'),
+            total_insolation=total_insolation,
+            vpd=vpd,
 
-            if filtered_data:
-                # ======= VPD 계산 ======
-                temp = filtered_data['air_temperature']
-                hum = filtered_data['air_humidity']
-                
-                # ZeroDivisionError 방지
-                if temp is None: temp = 0
-                if hum is None: hum = 0
-                
-                vpd = ((0.6107 * 10 ** (7.5 * temp / (237.3 + temp))) * (1 - (hum / 100)))
+            irrigation=irrigation,
+            total_irrigation=total_irrigation,
+            total_drainage=(raw_latest.tip_count or 0) * tip_capacity,
 
-                # ======= 관수량 계산 =======
-                current_weight = filtered_data['weight']
-                irrigation = 0
-                
-                # 이전 무게가 있고, 무게가 증가했다면 관수로 판단
-                if prev_weight > 0 and current_weight > prev_weight:
-                     irrigation = current_weight - prev_weight
-                
-                # ======= 보정 설정 로드 =======
-                cal_settings = CalibrationSettings.objects.last()
-                if not cal_settings:
-                    # 기본값 처리
-                    cal_settings = type('obj', (object,), {
-                        'weight_slope': 1, 'weight_intercept': 0,
-                        'ph_slope': 1, 'ph_intercept': 0,
-                        'ec_slope': 1, 'ec_intercept': 0
-                    })
+            water_temperature=filtered_data.get('water_temperature'),
+            ph=(cal_settings.ph_slope * (filtered_data.get('ph'))) + cal_settings.ph_intercept,
+            ec=(cal_settings.ec_slope * (filtered_data.get('ec'))) + cal_settings.ec_intercept,
 
-                # ======= 누적값 계산 =======
-                # 과거 데이터 합 + 현재 값으로 계산
-                agg_result = FinalData.objects.filter(timestamp__gte=today_start).aggregate(
-                    sum_insol=Sum('insolation'),
-                    sum_irrig=Sum('irrigation')
-                )
-                
-                # None 체크 (데이터 없으면 0)
-                total_insolation = (agg_result['sum_insol'] or 0) + filtered_data['insolation']
-                total_irrigation = (agg_result['sum_irrig'] or 0) + irrigation
+            soil_temperature=filtered_data.get('soil_temperature'),
+            soil_humidity=filtered_data.get('soil_humidity'),
+            soil_ec=filtered_data.get('soil_ec'),
+            soil_ph=filtered_data.get('soil_ph')
+        )
 
-                # ======= FinalData 저장 =======
-                FinalData.objects.create(
-                    timestamp=now,
-                    
-                    # 환경
-                    air_temperature=temp,
-                    air_humidity=hum,
-                    co2=filtered_data['co2'],
-                    insolation=filtered_data['insolation'],
-                    total_insolation=total_insolation,
-                    vpd=vpd,
+        print(f"[12] FinalData saved at {now.strftime('%H:%M:%S')}", flush = True)
 
-                    # 함수량
-                    weight=(cal_settings.weight_slope * current_weight) + cal_settings.weight_intercept,
-                    irrigation=irrigation,
-                    total_irrigation=total_irrigation,
-                    total_drainage=raw_latest.tip_count * tip_capacity,
+        prev_weight = current_weight
 
-                    # 배액
-                    water_temperature=filtered_data['water_temperature'],
-                    ph=(cal_settings.ph_slope * filtered_data['ph']) + cal_settings.ph_intercept,
-                    ec=(cal_settings.ec_slope * filtered_data['ec']) + cal_settings.ec_intercept,
-
-                    # 토양
-                    soil_temperature=filtered_data['soil_temperature'],
-                    soil_humidity=filtered_data['soil_humidity'],
-                    soil_ec=filtered_data['soil_ec'],
-                    soil_ph=filtered_data['soil_ph']
-                )
-
-                print(f"[Saved] FinalData at {now.strftime('%H:%M:%S')}")
-                
-                # 다음 루프를 위해 현재 무게 저장
-                prev_weight = current_weight
-
-        except Exception as e:
-            print(f"[FinalData Error] {e}")
-            # 에러 나도 루프는 계속 돌게 둠
+    except Exception as e:
+        print(f"[FinalData Error] {e}")
+        import traceback
+        traceback.print_exc()
