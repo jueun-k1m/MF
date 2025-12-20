@@ -5,17 +5,12 @@ import cv2
 import schedule
 import django
 from datetime import datetime
-from models import FarmJournal
+from omnitor.models import FarmJournal
 
 
-current_dir = os.path.dirname(os.path.abspath(__file__))
-project_root = os.path.dirname(current_dir)
-sys.path.append(project_root)
 
-os.environ.setdefault("DJANGO_SETTINGS_MODULE", "config.settings") 
-django.setup()
 
-STATIC_IMAGE_DIR = os.path.join(project_root, "static", "journal_images")
+STATIC_IMAGE_DIR = os.path.join("~/", "static", "journal_images")
 
 # 카메라 설정
 IMAGE_WIDTH = 8000
@@ -122,5 +117,4 @@ def run_scheduler():
             time.sleep(5) # 대기 후 다시 시도
 
 
-if __name__ == "__main__":
-    run_scheduler()
+
