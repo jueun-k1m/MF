@@ -1,53 +1,87 @@
-# gemini
-
 import json
-from django.http import JsonResponse, HttpResponseBadRequest, HttpResponse
-from datetime import datetime
-from django.omnitor.omnitor.models.models import FarmJournal
+import datetime
+from omnitor.models import CalibrationData
+from omnitor.services.filtering import avg
+from omnitor.services.save_calibrationsettings import calibrate_all
+from django.http import JsonResponse, HttpResponseBadRequest
 
-def camera_time_api(request):
-    
-    # === GET 요청: 설정된 시간 조회 ===
-    if request.method == 'GET':
-        journal = FarmJournal.objects.last() # [중요] 인스턴스 가져오기
-        
-        if not journal:
-            return JsonResponse({'capture_time': None, 'message': '설정된 데이터가 없습니다.'})
-            
-        return JsonResponse({'status': 'success', 'capture_time': journal.cam_time})
+def calibrate_api(request):
 
-    # === POST 요청: 시간 설정 업데이트 ===
-    elif request.method == 'POST':
+    """
+    [API] 센서 보정 설정 저장
+    무게 / ph / ec 각각 DB 다음 행에 보정 데이터 저장 및 보정 설정 저장
+    :param request: Description
+    """
+
+    if request.method == 'POST':
         try:
             data = json.loads(request.body)
-            new_time_str = data.get('capture_time') 
-            
-            if not new_time_str:
-                return HttpResponseBadRequest("시간을 설정해 주세요.") # 400 Bad Request
-
-            # 시간 형식 검증
-            valid_time = datetime.strptime(new_time_str, '%H:%M').time()
-
-            # DB 업데이트
-            journal = FarmJournal.objects.last()
-            
-            # 만약 DB가 비어있다면 새로 생성
-            if not journal:
-                journal = FarmJournal() 
-            
-            # 인스턴스에 값 할당 후 저장
-            journal.cam_time = valid_time
-            journal.save()
-            
-            print(f"카메라 시간이 새로 설정 되었습니다: {new_time_str}")
-            return JsonResponse({'status': 'success', 'message': f'설정 완료: {new_time_str}'})
-
-        except ValueError:
-            return HttpResponseBadRequest("시간 범위 오류: (HH:MM).")
+            action = data.get('action')
         except json.JSONDecodeError:
-            return HttpResponseBadRequest("JSON 포멧 오류.")
-        except Exception as e:
-            return JsonResponse({'status': 'error', 'message': str(e)}, status=500)
+            return JsonResponse({'error': 'Invalid JSON'}, status=400)
 
-    else:
-        return HttpResponseBadRequest("메서드 오류") 
+        # 1. Always target the SAME row for the current session
+        # We try to get the last one, or create the first one ever if DB is empty
+        obj = CalibrationData.objects.last()
+        if not obj:
+            obj = CalibrationData.objects.create()
+
+        # ======= WEIGHT =======
+        if action == 'calibrate_weight1':
+            obj.weight_real1 = data.get('weight_real1')
+            obj.weight_filtered1 = avg('total_weight')
+            obj.save()
+            return JsonResponse({'message': '무게1 저장 완료'})
+
+        elif action == 'calibrate_weight2':
+            obj.weight_real2 = data.get('weight_real2')
+            obj.weight_filtered2 = avg('total_weight')
+            obj.save()
+            return JsonResponse({'message': '무게2 저장 완료'})
+
+        # ======= pH (Fixed temperature field mapping) =======
+        elif action == 'calibrate_ph1':
+            obj.ph_real1 = data.get('ph_real1')
+            obj.ph_filtered1 = avg('ph')
+            obj.ph_water_temperature1 = data.get('ph_water_temperature1')
+            obj.save()
+            return JsonResponse({'message': 'ph1 저장 완료'})
+
+        elif action == 'calibrate_ph2':
+            obj.ph_real2 = data.get('ph_real2')
+            obj.ph_filtered2 = avg('ph')
+
+            obj.ph_water_temperature2 = data.get('ph_water_temperature2') 
+            obj.save()
+            return JsonResponse({'message': 'ph2 저장 완료'})
+
+        # ======= EC (Fixed temperature field mapping) =======
+        elif action == 'calibrate_ec1':
+            obj.ec_real1 = data.get('ec_real1')
+            obj.ec_filtered1 = avg('ec')
+            obj.ec_water_temperature1 = data.get('ec_water_temperature1')
+            obj.save()
+            return JsonResponse({'message': 'ec1 저장 완료'})
+
+        elif action == 'calibrate_ec2':
+            obj.ec_real2 = data.get('ec_real2')
+            obj.ec_filtered2 = avg('ec')
+            obj.ec_water_temperature2 = data.get('ec_water_temperature2')
+            print(f"[calibrate.py 1] ec_water_temp2: {data.get('ec_water_temperature2')}")
+            obj.save()
+            return JsonResponse({'message': 'ec2 저장 완료'})
+
+        # ======= FINAL APPLY ACTIONS =======
+        elif action == 'save_weight_calibration':
+            calibrate_all(obj)
+            return JsonResponse({'message': '무게 보정이 적용되었습니다.'})
+        
+        elif action == 'save_ph_calibration':
+            calibrate_all(obj)
+            return JsonResponse({'message': 'pH 보정이 적용되었습니다.'})
+
+        elif action == 'save_ec_calibration':
+            calibrate_all(obj)
+            return JsonResponse({'message': 'EC 보정이 적용되었습니다.'})
+
+        return JsonResponse({'error': 'Invalid Action'}, status=400)
