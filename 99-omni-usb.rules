@@ -1,0 +1,2 @@
+SUBSYSTEM=="tty", SUBSYSTEMS=="usb", ENV{ID_PATH}=="platform-xhci-hcd.0-usb-0:2:1.0", SYMLINK+="Arduino", MODE="0666"
+SUBSYSTEM=="tty", SUBSYSTEMS=="usb", ENV{ID_PATH}=="platform-xhci-hcd.1-usb-0:2:1.0", SYMLINK+="Soil", MODE="0666"
