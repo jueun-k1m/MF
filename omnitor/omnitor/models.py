@@ -33,8 +33,8 @@ class RawData(models.Model):
     
     # 배액 센서
     water_temperature = models.BigIntegerField(null=True, blank=True)
-    ph = models.FloatField(null=True, blank=True)
-    ec = models.FloatField(null=True, blank=True)
+    water_ph = models.FloatField(null=True, blank=True)
+    water_ec = models.FloatField(null=True, blank=True)
 
     # 로드셀
     weight = models.FloatField(null=True, blank=True)
@@ -49,7 +49,7 @@ class RawData(models.Model):
     soil_ph = models.FloatField(null=True, blank=True)
 
     def __str__(self):
-        return f"Raw 데이터: {self.timestamp.strftime('%Y-%m-%d %H:%M:%S')}"
+        return f"Raw 데이터 at {self.timestamp.strftime('%Y-%m-%d %H:%M:%S')}: {self.air_temperature}°C, {self.air_humidity}%, {self.co2}ppm, {self.insolation}lx, {self.weight}g, pH:{self.water_ph}, EC:{self.water_ec}, SoilT:{self.soil_temperature}°C, SoilH:{self.soil_humidity}%, SoilEC:{self.soil_ec}, SoilPH:{self.soil_ph}"
 
 class FinalData(models.Model):
 
@@ -68,11 +68,11 @@ class FinalData(models.Model):
 
     # 배액
     water_temperature = models.FloatField(null=True, blank=True)
-    ph = models.FloatField(null=True, blank=True)
-    ec = models.FloatField(null=True, blank=True)
+    water_ph = models.FloatField(null=True, blank=True)
+    water_ec = models.FloatField(null=True, blank=True)
 
     # 함수량
-    total_weight  = models.FloatField(null=True, blank=True)
+    weight  = models.FloatField(null=True, blank=True)
     irrigation = models.FloatField(null=True, blank=True)
     total_irrigation = models.FloatField(null=True, blank=True)
     total_drainage = models.IntegerField(null=True, blank=True)
@@ -84,7 +84,7 @@ class FinalData(models.Model):
     soil_ph = models.FloatField(null=True, blank=True)
 
     def __str__(self):
-        return f"Final 데이터: {self.timestamp.strftime('%Y-%m-%d %H:%M:%S')}"
+        return f"Final 데이터 at {self.timestamp.strftime('%Y-%m-%d %H:%M:%S')}: {self.air_temperature}°C, {self.air_humidity}%, {self.co2}ppm, {self.insolation}lx, {self.weight}g, pH:{self.water_ph}, EC:{self.water_ec}, SoilT:{self.soil_temperature}°C, SoilH:{self.soil_humidity}%, SoilEC:{self.soil_ec}, SoilPH:{self.soil_ph}"
 
 
 class CalibrationSettings(models.Model):
@@ -133,14 +133,8 @@ class CalibrationData(models.Model):
     ph_real2 = models.FloatField(default=0, null=True, blank=True)
     ph_filtered1 = models.FloatField(default=0, null=True, blank=True)
     ph_filtered2 = models.FloatField(default=0, null=True, blank=True)
-    ph_water_temperature1 = models.FloatField(default=25, null=True, blank=True)
-    ph_water_temperature2 = models.FloatField(default=25, null=True, blank=True)
 
     ec_real1 = models.FloatField(default=0, null=True, blank=True)
     ec_real2 = models.FloatField(default=0, null=True, blank=True)
     ec_filtered1 = models.FloatField(default=0, null=True, blank=True)
     ec_filtered2 = models.FloatField(default=0, null=True, blank=True)
-
-    # 특히 이 부분들!
-    ec_water_temperature1 = models.FloatField(default=25, null=True, blank=True)
-    ec_water_temperature2 = models.FloatField(default=25, null=True, blank=True)
