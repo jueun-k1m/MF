@@ -1,8 +1,8 @@
 import json
 import datetime
-from omnitor.models import CalibrationData
-from omnitor.services.filtering import avg
+from omnitor.models import CalibrationData, RawData
 from omnitor.services.save_calibrationsettings import calibrate_all
+from omnitor.services.filtering import avg
 from django.http import JsonResponse, HttpResponseBadRequest
 
 def calibrate_api(request):
@@ -20,54 +20,47 @@ def calibrate_api(request):
         except json.JSONDecodeError:
             return JsonResponse({'error': 'Invalid JSON'}, status=400)
 
-        # 1. Always target the SAME row for the current session
-        # We try to get the last one, or create the first one ever if DB is empty
         obj = CalibrationData.objects.last()
+        raw = RawData.objects.last()
         if not obj:
             obj = CalibrationData.objects.create()
 
         # ======= WEIGHT =======
         if action == 'calibrate_weight1':
             obj.weight_real1 = data.get('weight_real1')
-            obj.weight_filtered1 = avg('total_weight')
+            obj.weight_filtered1 = avg('weight')
             obj.save()
             return JsonResponse({'message': '무게1 저장 완료'})
 
         elif action == 'calibrate_weight2':
             obj.weight_real2 = data.get('weight_real2')
-            obj.weight_filtered2 = avg('total_weight')
+            obj.weight_filtered2 = avg('weight')
             obj.save()
             return JsonResponse({'message': '무게2 저장 완료'})
 
         # ======= pH (Fixed temperature field mapping) =======
         elif action == 'calibrate_ph1':
             obj.ph_real1 = data.get('ph_real1')
-            obj.ph_filtered1 = avg('ph')
-            obj.ph_water_temperature1 = data.get('ph_water_temperature1')
+            obj.ph_filtered1 = avg('water_ph')
             obj.save()
             return JsonResponse({'message': 'ph1 저장 완료'})
 
         elif action == 'calibrate_ph2':
             obj.ph_real2 = data.get('ph_real2')
-            obj.ph_filtered2 = avg('ph')
-
-            obj.ph_water_temperature2 = data.get('ph_water_temperature2') 
+            obj.ph_filtered2 = avg('water_ph')
             obj.save()
             return JsonResponse({'message': 'ph2 저장 완료'})
 
         # ======= EC (Fixed temperature field mapping) =======
         elif action == 'calibrate_ec1':
             obj.ec_real1 = data.get('ec_real1')
-            obj.ec_filtered1 = avg('ec')
-            obj.ec_water_temperature1 = data.get('ec_water_temperature1')
+            obj.ec_filtered1 = avg('water_ec')
             obj.save()
             return JsonResponse({'message': 'ec1 저장 완료'})
 
         elif action == 'calibrate_ec2':
             obj.ec_real2 = data.get('ec_real2')
-            obj.ec_filtered2 = avg('ec')
-            obj.ec_water_temperature2 = data.get('ec_water_temperature2')
-            print(f"[calibrate.py 1] ec_water_temp2: {data.get('ec_water_temperature2')}")
+            obj.ec_filtered2 = avg('water_ec')
             obj.save()
             return JsonResponse({'message': 'ec2 저장 완료'})
 
