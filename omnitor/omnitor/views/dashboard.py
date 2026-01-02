@@ -33,15 +33,15 @@ def dashboard_api(request):
                 # 'vpd': latest_data.vpd,                              => 그래프에서만 표시. 대시보드에선 필요 없음
                 
                 # 함수량 및 관수/배액
-                'total_weight': latest_data.total_weight,
+                'weight': latest_data.weight,
                 'irrigation': latest_data.irrigation,             # 이번 텀의 관수량
                 # 'total_irrigation': latest_data.total_irrigation,    => 그래프에서만 표시. 대시보드에선 필요 없음
-                'drainage': latest_data.total_drainage,           # 오늘 누적 배액량 total_drainage (tip_count * capacity)
+                'total_drainage': latest_data.total_drainage,           # 오늘 누적 배액량 total_drainage (tip_count * capacity)
 
                 # 배액 센서 데이터
                 'water_temperature': latest_data.water_temperature,
-                'ph': latest_data.ph,
-                'ec': latest_data.ec,
+                'water_ph': latest_data.water_ph,
+                'water_ec': latest_data.water_ec,
                 
                 # 토양 센서 데이터
                 'soil_temperature': latest_data.soil_temperature,
