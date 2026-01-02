@@ -4,11 +4,14 @@ import threading
 import time
 import schedule 
 
-from .devices.arduino import SerialSingleton
 from .devices.soil import SoilSensorSingleton
+from .devices.water import WaterSensorSingleton
+from .devices.gpio import GPIOSensorSingleton
 
 def run_scheduler_loop():
     print("[Debug] Run Scheduler Loop", flush=True)
+    time.sleep(2)  # 초기 대기 시간
+
     while True:
         schedule.run_pending()
         time.sleep(1)
@@ -20,29 +23,30 @@ class OmnitorConfig(AppConfig):
         if os.environ.get("RUN_MAIN") != "true":
             return
 
-        serial = SerialSingleton.instance()
-        soil = SoilSensorSingleton.instance()
-        serial.start()
-        soil.start()
+        gpio = GPIOSensorSingleton.instance()
+        gpio.start()
 
-        from .services import schedule as my_schedule_service, save_data
-        
-        my_schedule_service.add_time_interval_schedule(
-            "save_rawdata", 
-            1, 
-            lambda: save_data.save_rawdata(serial, soil)
-        )
-        
-        my_schedule_service.add_time_interval_schedule(
-            "save_finaldata", 
-            60, 
-            save_data.save_finaldata
-        )
-        
+        soil = SoilSensorSingleton.instance()
+        soil.start()
+   
+        water = WaterSensorSingleton.instance()
+        water.start()
+
+        def sensor_job():
+            # 이 함수는 1초마다 실행됩니다.
+            # 실행될 때마다 import를 확인하므로 에러가 나지 않습니다.
+            from .services.save_data import save_rawdata
+            save_rawdata(gpio, soil, water)
+
+        # 위에서 만든 함수를 스케줄러에 등록
+        schedule.every(1).second.do(sensor_job)
+
+        # finaldata도 마찬가지 방식으로 처리 가능
+        def final_data_job():
+            from .services.save_data import save_finaldata
+            save_finaldata()
+            
+        schedule.every(60).seconds.do(final_data_job)
+
         scheduler_thread = threading.Thread(target=run_scheduler_loop, daemon=True)
         scheduler_thread.start()
-        print(">>> [System] Data Collector Scheduler Started!")
-
-        #rom .devices import camera
-        #camera_thread = threading.Thread(target=camera.run_scheduler, daemon=True)
-        #camera_thread.start()
