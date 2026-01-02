@@ -1,7 +1,5 @@
 import serial
-import time
 import minimalmodbus
-import serial.tools.list_ports
 from dataclasses import dataclass
 from threading import Lock
 
@@ -26,30 +24,21 @@ class SoilSensor:
         self.parity = serial.PARITY_NONE
         self.stopbits = 1
         self.timeout = 1.0
-
-    def find_port(self):
-        #ports = serial.tools.list_ports.comports()
-        #for port in ports:
-        #    if ("serial" in port.description):
-                # return port.device
-        #        return "/dev/ttyUSB0"
-        #print('Cannot find soil port')
-        return "/dev/Soil"
     
     def start(self):
         with self.lock:
             if self.instrument:
                 return True
             
-            self.port = self.find_port()
-            print(f"[Soil] 포트 연결 시도: {self.port}")
+            self.port = "/dev/ttyUSB1"
+            print(f"[Soil1] 포트 연결 시도: {self.port}")
             
             if not self.port:
-                print("[Soil] 포트를 찾지 못했습니다.")
+                print("[Soil2] 포트를 찾지 못했습니다.")
                 return False
             
             try:
-                print("[Soil] 포트 연결 성공!")
+                print("[Soil3] 포트 연결 성공!")
                 self.instrument = minimalmodbus.Instrument(self.port, self.slave_address)
                 self.instrument.serial.baudrate = self.baudrate
                 self.instrument.serial.bytesize = self.bytesize
@@ -60,7 +49,7 @@ class SoilSensor:
                 return True
             
             except Exception as e:
-                print(f"[Soil] 초기화 실패: {e}")
+                print(f"[Soil4] 초기화 실패: {e}")
                 self.instrument = None
                 return False
 
@@ -71,11 +60,9 @@ class SoilSensor:
                     return None
             
             try:
-                #print("Try to read register")
                 values = self.instrument.read_registers(0, 4, functioncode=3)
-                #print("Done")
-                soil_temperature = values[0] / 10.0 
-                soil_humidity = values[1] / 10.0
+                soil_temperature = values[1] / 10.0 
+                soil_humidity = values[0] / 10.0
                 soil_ec = values[2]
                 soil_ph = values[3] / 10.0 
 
@@ -87,6 +74,7 @@ class SoilSensor:
                 )
             
             except Exception as e:
+                print(f"[Soil Error] {e}")
                 self.instrument.serial.close()
                 self.instrument = None
                 return None
