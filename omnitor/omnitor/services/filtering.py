@@ -6,7 +6,7 @@ WINDOW_SIZE = 5
 # 평균을 낼 필드 목록을 미리 정의 (timestamp 등 제외)
 TARGET_FIELDS = [
     'air_temperature', 'air_humidity', 'co2', 'insolation', 
-    'weight', 'ph', 'ec', 'water_temperature', 
+    'weight', 'water_ph', 'water_ec', 'water_temperature', 
     'soil_temperature', 'soil_humidity', 'soil_ec', 'soil_ph'
 ] 
 
@@ -40,19 +40,20 @@ def maf_all():
 def avg(field_name):
     """
     DB에서 특정 필드의 최신 값 WINDOW_SIZE개를 가져와 평균을 계산하여 반환
-    CalibrationData filtered 값 저장할 때 사용
-    :param field_name: 평균을 낼 필드 이름
-    :return: 해당 필드의 평균 값
+    (None 값은 제외하고 계산하여 에러 방지)
     """
 
-    # 1. 최신 데이터 5개 가져오기
+    # 1. 최신 데이터 가져오기 (None 포함될 수 있음)
     val_5 = RawData.objects.values_list(field_name, flat=True).order_by('-timestamp')[:WINDOW_SIZE]
 
-    # 2. 데이터가 없으면 None 반환
-    if not val_5:
+    # 2. None 값 제거 (List Comprehension)
+    valid_values = [v for v in val_5 if v is not None]
+
+    # 3. 유효한 데이터가 없으면 0 반환
+    if not valid_values:
         return 0
     
-    # 3. 평균 계산
-    average_val = sum(val_5) / len(val_5) # (주의: 함수명과 변수명이 같음)
+    # 4. 평균 계산
+    average_val = sum(valid_values) / len(valid_values)
     
     return average_val
