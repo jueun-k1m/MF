@@ -1,87 +1,352 @@
-import json
-import datetime
-from omnitor.models import CalibrationData
-from omnitor.services.filtering import avg
-from omnitor.services.save_calibrationsettings import calibrate_all
-from django.http import JsonResponse, HttpResponseBadRequest
+{% extends 'base.html' %}
+{% load static %}
 
-def calibrate_api(request):
+{% block title %}센서 보정 - Gomojang{% endblock %}
+{% block page_title %}센서 보정 (Sensor Calibration){% endblock %}
 
-    """
-    [API] 센서 보정 설정 저장
-    무게 / ph / ec 각각 DB 다음 행에 보정 데이터 저장 및 보정 설정 저장
-    :param request: Description
-    """
+{% block extra_css %}
+<style>
+    .calib-card {
+        border: none;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+        border-radius: 12px;
+        transition: transform 0.2s;
+        height: 100%;
+    }
+    .calib-card:hover {
+        transform: translateY(-5px);
+    }
+    .calib-header {
+        background-color: transparent;
+        border-bottom: 2px solid #f0f0f0;
+        padding: 1.5rem;
+        text-align: center;
+        font-weight: 700;
+        color: #495057;
+    }
+    .calib-body {
+        padding: 2rem;
+    }
+    .step-box {
+        background-color: #f8f9fa;
+        border: 1px solid #e9ecef;
+        border-radius: 8px;
+        padding: 15px;
+        margin-bottom: 15px;
+        position: relative;
+    }
+    .step-badge {
+        position: absolute;
+        top: -10px;
+        left: 10px;
+        background-color: #0d6efd;
+        color: white;
+        padding: 2px 8px;
+        border-radius: 4px;
+        font-size: 0.75rem;
+        font-weight: bold;
+    }
+    .form-label {
+        font-size: 0.9rem;
+        font-weight: 600;
+        color: #6c757d;
+    }
+    .result-text {
+        font-size: 0.85rem;
+        color: #198754;
+        margin-top: 5px;
+        min-height: 20px;
+    }
+    /* 현재 수온 표시용 배지 스타일 */
+    .temp-badge {
+        background-color: #e7f5ff;
+        color: #0c8599;
+        padding: 8px 15px;
+        border-radius: 20px;
+        font-weight: bold;
+        border: 1px solid #c3e6cb;
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+    }
+</style>
+{% endblock %}
 
-    if request.method == 'POST':
-        try:
-            data = json.loads(request.body)
-            action = data.get('action')
-        except json.JSONDecodeError:
-            return JsonResponse({'error': 'Invalid JSON'}, status=400)
+{% block content %}
+<div class="container-fluid p-0">
+    
+    <div class="row mb-4 align-items-center">
+        <div class="col-md-6">
+            <div class="temp-badge">
+                <i class="fas fa-thermometer-half"></i> 
+                현재 수온: <span id="current-water-temp">Loading...</span>
+            </div>
+        </div>
+        <div class="col-md-6 text-md-end mt-3 mt-md-0">
+            <button class="btn btn-outline-success" id="btn-save-all">
+                <i class="fas fa-save me-1"></i> 모든 보정 설정 저장
+            </button>
+        </div>
+    </div>
 
-        # 1. Always target the SAME row for the current session
-        # We try to get the last one, or create the first one ever if DB is empty
-        obj = CalibrationData.objects.last()
-        if not obj:
-            obj = CalibrationData.objects.create()
-
-        # ======= WEIGHT =======
-        if action == 'calibrate_weight1':
-            obj.weight_real1 = data.get('weight_real1')
-            obj.weight_filtered1 = avg('total_weight')
-            obj.save()
-            return JsonResponse({'message': '무게1 저장 완료'})
-
-        elif action == 'calibrate_weight2':
-            obj.weight_real2 = data.get('weight_real2')
-            obj.weight_filtered2 = avg('total_weight')
-            obj.save()
-            return JsonResponse({'message': '무게2 저장 완료'})
-
-        # ======= pH (Fixed temperature field mapping) =======
-        elif action == 'calibrate_ph1':
-            obj.ph_real1 = data.get('ph_real1')
-            obj.ph_filtered1 = avg('ph')
-            obj.ph_water_temperature1 = data.get('ph_water_temperature1')
-            obj.save()
-            return JsonResponse({'message': 'ph1 저장 완료'})
-
-        elif action == 'calibrate_ph2':
-            obj.ph_real2 = data.get('ph_real2')
-            obj.ph_filtered2 = avg('ph')
-
-            obj.ph_water_temperature2 = data.get('ph_water_temperature2') 
-            obj.save()
-            return JsonResponse({'message': 'ph2 저장 완료'})
-
-        # ======= EC (Fixed temperature field mapping) =======
-        elif action == 'calibrate_ec1':
-            obj.ec_real1 = data.get('ec_real1')
-            obj.ec_filtered1 = avg('ec')
-            obj.ec_water_temperature1 = data.get('ec_water_temperature1')
-            obj.save()
-            return JsonResponse({'message': 'ec1 저장 완료'})
-
-        elif action == 'calibrate_ec2':
-            obj.ec_real2 = data.get('ec_real2')
-            obj.ec_filtered2 = avg('ec')
-            obj.ec_water_temperature2 = data.get('ec_water_temperature2')
-            print(f"[calibrate.py 1] ec_water_temp2: {data.get('ec_water_temperature2')}")
-            obj.save()
-            return JsonResponse({'message': 'ec2 저장 완료'})
-
-        # ======= FINAL APPLY ACTIONS =======
-        elif action == 'save_weight_calibration':
-            calibrate_all(obj)
-            return JsonResponse({'message': '무게 보정이 적용되었습니다.'})
+    <div class="row g-4">
         
-        elif action == 'save_ph_calibration':
-            calibrate_all(obj)
-            return JsonResponse({'message': 'pH 보정이 적용되었습니다.'})
+        <div class="col-lg-4">
+            <div class="card calib-card">
+                <div class="calib-header border-bottom-0 pb-0">
+                    <i class="fas fa-weight-hanging fa-2x text-primary mb-2"></i><br>
+                    무게 센서 보정
+                </div>
+                <div class="calib-body">
+                    <div class="step-box">
+                        <span class="step-badge">STEP 1</span>
+                        <label class="form-label">첫 번째 무게 (g)</label>
+                        <div class="input-group mb-2">
+                            <input type="number" class="form-control" id="weight-real1" placeholder="예: 0 (빈 통)">
+                            <button class="btn btn-primary" type="button" id="btn-weight1">저장</button>
+                        </div>
+                        <div class="result-text" id="res-weight1"></div>
+                    </div>
 
-        elif action == 'save_ec_calibration':
-            calibrate_all(obj)
-            return JsonResponse({'message': 'EC 보정이 적용되었습니다.'})
+                    <div class="step-box">
+                        <span class="step-badge">STEP 2</span>
+                        <label class="form-label">두 번째 무게 (g)</label>
+                        <div class="input-group mb-2">
+                            <input type="number" class="form-control" id="weight-real2" placeholder="예: 1000 (추)">
+                            <button class="btn btn-secondary" type="button" id="btn-weight2" disabled>저장</button>
+                        </div>
+                        <div class="result-text" id="res-weight2"></div>
+                    </div>
 
-        return JsonResponse({'error': 'Invalid Action'}, status=400)
+                    <div class="d-grid mt-4">
+                        <button class="btn btn-success" type="button" id="btn-weight-save" disabled>
+                            보정값 적용하기
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-4">
+            <div class="card calib-card">
+                <div class="calib-header border-bottom-0 pb-0">
+                    <i class="fas fa-flask fa-2x text-warning mb-2"></i><br>
+                    pH 센서 보정
+                </div>
+                <div class="calib-body">
+                    <div class="step-box">
+                        <span class="step-badge">STEP 1</span>
+                        <label class="form-label">첫 번째 용액 (pH 7.0)</label>
+                        <div class="input-group mb-2">
+                            <input type="number" class="form-control" id="ph-real1" value="7.0" step="0.1">
+                            <button class="btn btn-primary" type="button" id="btn-ph1">측정</button>
+                        </div>
+                        <div class="result-text" id="res-ph1"></div>
+                    </div>
+
+                    <div class="step-box">
+                        <span class="step-badge">STEP 2</span>
+                        <label class="form-label">두 번째 용액 (pH 4.0)</label>
+                        <div class="input-group mb-2">
+                            <input type="number" class="form-control" id="ph-real2" value="4.0" step="0.1">
+                            <button class="btn btn-secondary" type="button" id="btn-ph2" disabled>측정</button>
+                        </div>
+                        <div class="result-text" id="res-ph2"></div>
+                    </div>
+
+                    <div class="d-grid mt-4">
+                        <button class="btn btn-success" type="button" id="btn-ph-save" disabled>
+                            보정값 적용하기
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-4">
+            <div class="card calib-card">
+                <div class="calib-header border-bottom-0 pb-0">
+                    <i class="fas fa-bolt fa-2x text-info mb-2"></i><br>
+                    EC 센서 보정
+                </div>
+                <div class="calib-body">
+                    <div class="step-box">
+                        <span class="step-badge">STEP 1</span>
+                        <label class="form-label">첫 번째 용액 (Low EC)</label>
+                        <div class="input-group mb-2">
+                            <input type="number" class="form-control" id="ec-real1" placeholder="예: 1413">
+                            <button class="btn btn-primary" type="button" id="btn-ec1">측정</button>
+                        </div>
+                        <div class="result-text" id="res-ec1"></div>
+                    </div>
+
+                    <div class="step-box">
+                        <span class="step-badge">STEP 2</span>
+                        <label class="form-label">두 번째 용액 (High EC)</label>
+                        <div class="input-group mb-2">
+                            <input type="number" class="form-control" id="ec-real2" placeholder="예: 12880">
+                            <button class="btn btn-secondary" type="button" id="btn-ec2" disabled>측정</button>
+                        </div>
+                        <div class="result-text" id="res-ec2"></div>
+                    </div>
+
+                    <div class="d-grid mt-4">
+                        <button class="btn btn-success" type="button" id="btn-ec-save" disabled>
+                            보정값 적용하기
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </div> </div>
+
+<div class="position-fixed bottom-0 end-0 p-3" style="z-index: 11">
+  <div id="calibToast" class="toast align-items-center text-white bg-dark border-0" role="alert" aria-live="assertive" aria-atomic="true">
+    <div class="d-flex">
+      <div class="toast-body" id="toast-msg">
+        처리되었습니다.
+      </div>
+      <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
+    </div>
+  </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+
+    const csrfToken = document.querySelector('input[name="csrfmiddlewaretoken"]')?.value;
+    let currentWaterTemp = 25.0; 
+
+    // --- 수온 데이터 실시간 가져오기 ---
+    async function fetchWaterTemp() {
+        try {
+            const response = await fetch('/dashboard_api/');
+            if(response.ok) {
+                const data = await response.json();
+                if(data.water_temperature !== undefined && data.water_temperature !== null) {
+                    currentWaterTemp = parseFloat(data.water_temperature);
+                    document.getElementById('current-water-temp').textContent = currentWaterTemp.toFixed(1) + " °C";
+                }
+            }
+        } catch(e) { console.error("수온 가져오기 실패:", e); }
+    }
+    fetchWaterTemp();
+    setInterval(fetchWaterTemp, 5000);
+
+    // --- 공통 API 요청 함수 ---
+    async function sendCalibration(action, payload = {}) {
+        try {
+            const bodyData = { action: action, ...payload };
+            const response = await fetch('/calibrate_api/', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': '{{ csrf_token }}' // Django 템플릿 태그 사용 권장
+                },
+                body: JSON.stringify(bodyData)
+            });
+            const result = await response.json();
+            if (response.ok) {
+                showToast(result.message || '완료되었습니다.');
+                return { success: true };
+            } else {
+                alert("오류: " + (result.error || "알 수 없는 오류"));
+                return { success: false };
+            }
+        } catch (error) {
+            alert("네트워크 오류가 발생했습니다.");
+            return { success: false };
+        }
+    }
+
+    // --- 1. 무게 센서 (변수명: weight_real1, weight_real2) ---
+    document.getElementById('btn-weight1').addEventListener('click', async () => {
+        const val = document.getElementById('weight-real1').value;
+        if(!val) return alert("값을 입력하세요.");
+        const res = await sendCalibration('calibrate_weight1', { weight_real1: val });
+        if(res.success) {
+            document.getElementById('res-weight1').textContent = `✔ 무게1 저장됨`;
+            document.getElementById('btn-weight2').disabled = false;
+        }
+    });
+
+    document.getElementById('btn-weight2').addEventListener('click', async () => {
+        const val = document.getElementById('weight-real2').value;
+        if(!val) return alert("값을 입력하세요.");
+        const res = await sendCalibration('calibrate_weight2', { weight_real2: val });
+        if(res.success) {
+            document.getElementById('res-weight2').textContent = `✔ 무게2 저장됨`;
+            document.getElementById('btn-weight-save').disabled = false;
+        }
+    });
+
+    // --- 2. pH 센서 (주의: 백엔드 필드명이 ph_water_temperature1로 통일됨) ---
+    document.getElementById('btn-ph1').addEventListener('click', async () => {
+        const val = document.getElementById('ph-real1').value;
+        const res = await sendCalibration('calibrate_ph1', { 
+            ph_real1: val, 
+            ph_water_temperature1: currentWaterTemp
+        });
+        if(res.success) {
+            document.getElementById('res-ph1').textContent = `✔ pH 7.0 측정완료`;
+            document.getElementById('btn-ph2').disabled = false;
+        }
+    });
+
+    document.getElementById('btn-ph2').addEventListener('click', async () => {
+        const val = document.getElementById('ph-real2').value;
+        const res = await sendCalibration('calibrate_ph2', { 
+            ph_real2: val, 
+            ph_water_temperature2: currentWaterTemp
+        });
+        if(res.success) {
+            document.getElementById('res-ph2').textContent = `✔ pH 4.0 측정완료`;
+            document.getElementById('btn-ph-save').disabled = false;
+        }
+    });
+
+    // --- 3. EC 센서 ---
+    document.getElementById('btn-ec1').addEventListener('click', async () => {
+        const val = document.getElementById('ec-real1').value;
+        const res = await sendCalibration('calibrate_ec1', { 
+            ec_real1: val, 
+            ec_water_temperature1: currentWaterTemp 
+        });
+        if(res.success) {
+            document.getElementById('res-ec1').textContent = `EC Low 측정완료`;
+            document.getElementById('btn-ec2').disabled = false;
+        }
+    });
+
+    document.getElementById('btn-ec2').addEventListener('click', async () => {
+        const val = document.getElementById('ec-real2').value;
+        const res = await sendCalibration('calibrate_ec2', { 
+            ec_real2: val, 
+            ec_water_temperature2: currentWaterTemp 
+        });
+        if(res.success) {
+            document.getElementById('res-ec2').textContent = `EC High 측정완료`;
+            document.getElementById('btn-ec-save').disabled = false;
+        }
+    });
+
+    // --- 보정값 최종 적용 버튼들 ---
+    document.getElementById('btn-weight-save').addEventListener('click', () => sendCalibration('save_weight_calibration'));
+    document.getElementById('btn-ph-save').addEventListener('click', () => sendCalibration('save_ph_calibration'));
+    document.getElementById('btn-ec-save').addEventListener('click', () => sendCalibration('save_ec_calibration'));
+    document.getElementById('btn-save-all').addEventListener('click', () => {
+        if(confirm("전체 보정 설정을 저장하시겠습니까?")) sendCalibration('save_all_calibration');
+    });
+
+    function showToast(msg) {
+        const toastEl = document.getElementById('calibToast');
+        document.getElementById('toast-msg').textContent = msg;
+        new bootstrap.Toast(toastEl).show();
+    }
+});
+</script>
+{% endblock %}
