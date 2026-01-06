@@ -3,6 +3,7 @@ import os
 import threading
 import time
 import schedule 
+from datetime import datetime
 
 from .devices.soil import SoilSensorSingleton
 from .devices.water import WaterSensorSingleton
@@ -54,8 +55,24 @@ class OmnitorConfig(AppConfig):
         schedule.every(60).seconds.do(final_data_job)
 
         def camera_job():
-            from .devices.camera import check_capture
-            check_capture()
+            from .devices.camera import take_photo
+            from .models import FarmJournal
+            now = datetime.now()
+            current_time_str = now.strftime("%H:%M") # 현재 시간
+            today = now.date()
+            journal = FarmJournal.objects.filter(date=today).first()
+
+            if journal and journal.cam_time:
+                target_time_str = journal.cam_time.strftime("%H:%M") # DB에 저장된 시간
+
+            # 비교: 현재 시간이 설정 시간과 같으면 촬영!
+            if current_time_str == target_time_str:
+               #print(f"[apps.camera_job] 촬영 시간 도달! ({current_time_str})", flush=True)
+                take_photo()
+            else:
+                # 디버깅용
+                #print(f"[apps.camera_job] 대기 중... 현재: {current_time_str} / 목표: {target_time_str}", flush=True)
+                pass
 
         schedule.every(60).seconds.do(camera_job)
 
