@@ -357,7 +357,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }));
 
         // 1. 무게 차트
-        charts.weight.data.datasets[0].data = parseData('total_weight');
+        charts.weight.data.datasets[0].data = parseData('weight');
         charts.weight.data.datasets[1].data = parseData('irrigation');
         charts.weight.data.datasets[2].data = parseData('total_drainage');
         charts.weight.update();
@@ -370,8 +370,8 @@ document.addEventListener('DOMContentLoaded', () => {
         charts.env.update();
 
         // 3. 배액 차트
-        charts.water.data.datasets[0].data = parseData('ph');
-        charts.water.data.datasets[1].data = parseData('ec');
+        charts.water.data.datasets[0].data = parseData('water_ph');
+        charts.water.data.datasets[1].data = parseData('water_ec');
         charts.water.data.datasets[2].data = parseData('water_temperature');
         charts.water.update();
 
