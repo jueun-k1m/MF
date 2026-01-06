@@ -1,9 +1,9 @@
 import pandas as pd
 import json
-from datetime import timedelta, datetime, time  # datetime, time 추가 필요
+from datetime import timedelta, datetime, time
 from django.http import JsonResponse, HttpResponse
 from django.utils import timezone
-from django.utils.dateparse import parse_datetime, parse_date # parse_date 추가
+from django.utils.dateparse import parse_date
 from omnitor.models import FinalData
 
 def graph_api(request):
