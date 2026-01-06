@@ -1,120 +1,81 @@
 import os
-import sys
-import time
 import cv2
-import schedule
-import django
 from datetime import datetime
-from omnitor.models import FarmJournal
+from django.conf import settings
 
-
-
-
-STATIC_IMAGE_DIR = os.path.join("~/", "static", "journal_images")
-
-# 카메라 설정
+# 설정
+SAVE_DIR_NAME = "journal_images"
+MEDIA_IMAGE_DIR = os.path.join(settings.MEDIA_ROOT, SAVE_DIR_NAME)
 IMAGE_WIDTH = 8000
 IMAGE_HEIGHT = 6000
 WARM_UP_FRAMES = 30
 
-
-def decode_fourcc(val):
-    return "".join([chr((int(val) >> 8 * i) & 0xFF) for i in range(4)])
-
-
-def capture_job():
-
-    """
-    지정된 시간에 사진을 찍고 DB 업데이트 (cam_time, image_dir) 하는 함수
-    """
-
-    print(f"[{datetime.now()}] 사진 촬영 시작 !")
+def take_photo():
+    """실제로 사진을 찍고 DB에 저장하는 함수 (내부 호출용)"""
+    os.makedirs(MEDIA_IMAGE_DIR, exist_ok=True)
     
-    journal = FarmJournal.objects.last()
-
-    if not journal:
-        print("에러: DB FarmJournal 데이터가 없습니다.")
-        return
+    now = datetime.now()
+    today_date = now.date()
     
-    os.makedirs(STATIC_IMAGE_DIR, exist_ok=True)
+    # 파일명 및 경로
+    filename = f"{now.strftime('%Y-%m-%d_%H-%M')}.jpg"
+    full_path = os.path.join(MEDIA_IMAGE_DIR, filename)
 
-    filename = f"{datetime.now().strftime('%Y-%m-%d_%H-%M-%S')}.jpg"
-    full_path = os.path.join(STATIC_IMAGE_DIR, filename)
-
-    save_path = f"journal_images/{filename}"
+    print(f"[{now}] 사진 촬영 시작...", flush=True)
 
     cap = None
-
     try:
-        cap = cv2.VideoCapture(0)
+        cap = cv2.VideoCapture(0, cv2.CAP_V4L2)
         if not cap.isOpened():
-            print("에러: 카메라를 열 수 없습니다.")
+            print("카메라 연결 실패", flush=True)
             return
-            
-        fourcc = cv2.VideoWriter_fourcc(*'MJPG')
-        cap.set(cv2.CAP_PROP_FOURCC, fourcc)
+        cap.set(cv2.CAP_PROP_FOURCC, cv2.VideoWriter_fourcc('M', 'J', 'P', 'G'))
         cap.set(cv2.CAP_PROP_FRAME_WIDTH, IMAGE_WIDTH)
         cap.set(cv2.CAP_PROP_FRAME_HEIGHT, IMAGE_HEIGHT)
         
-        print("카메라 예열 중...")
         for _ in range(WARM_UP_FRAMES):
             cap.read()
 
         ret, frame = cap.read()
-
         if ret:
             cv2.imwrite(full_path, frame)
-            print(f"이미지 저장 성공! 이미지가 저장된 경로: {full_path}")
-
-            journal.image_dir = save_path
-            journal.save()
-
+            print(f"full_path: {full_path}", flush=True)
+            
         else:
-            print("에러: 사진을 저장하지 못 했습니다.")
+            print("빈 화면", flush=True)
 
     except Exception as e:
-        print(f"오류 발생: {e}")
+        print(f"카메라 에러: {e}", flush=True)
     finally:
-        if cap is not None:
+        if cap:
             cap.release()
-            print("카메라 리소스 해제됨.")
 
-def run_scheduler():
-
+def check_capture():
     """
-    main 루프에서 돌릴 함수
-    DB cam_time 지정된 시간에 스케줄러를 사용하여 카메라 찍도록 조정
+    DB 시간을 확인해서 현재 시간과 일치하면 촬영
     """
+    from omnitor.models import FarmJournal
 
-    current_sched_time = None
+    try:
+        now = datetime.now()
+        current_time_str = now.strftime("%H:%M") # 현재 시간
 
-    print("스케줄러 시작!")
+        # DB에서 오늘 날짜 설정 가져오기
+        today = now.date()
+        journal = FarmJournal.objects.filter(date=today).first()
 
-    while True:
-        try:
-            journal = FarmJournal.objects.last()
+        target_time_str = "11:27" # 기본값
+        if journal and journal.cam_time:
+            target_time_str = journal.cam_time.strftime("%H:%M") # DB에 저장된 시간
 
-            if journal and journal.cam_time:
-                target_time_str = journal.cam_time.strftime("%H:%M")
+        # 비교: 현재 시간이 설정 시간과 같으면 촬영!
+        if current_time_str == target_time_str:
+            print(f"촬영 시간 도달! ({current_time_str})", flush=True)
+            take_photo()
+        else:
+            # 디버깅용
+            print(f"대기 중... 현재: {current_time_str} / 목표: {target_time_str}", flush=True)
+            pass
 
-                if current_sched_time != target_time_str:
-                    schedule.clear()
-                    schedule.every().day.at(target_time_str).do(capture_job)
-
-                    current_sched_time = target_time_str
-
-            else:
-                if current_sched_time is not None:
-                    schedule.clear()
-                    current_sched_time = None
-
-            schedule.run_pending()
-
-            time.sleep(1)
-
-        except Exception as e:
-            print(f"오류 발생: {e}")
-            time.sleep(5) # 대기 후 다시 시도
-
-
-
+    except Exception as e:
+        print(f"카메라 시간 체크 중 에러: {e}", flush=True)
