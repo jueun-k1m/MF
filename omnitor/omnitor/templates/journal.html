@@ -8,14 +8,86 @@
 {% block extra_css %}
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
 <style>
-    /* 캘린더 커스텀 스타일 */
+    /* 캘린더 스타일 */
     .flatpickr-calendar {
+        width: 100% !important;
+        max-width: 100% !important;
         margin: 0 auto;
-        box-shadow: none;
-        border: 1px solid #e9ecef;
-        background: #fff;
+        box-shadow: none !important;
+        border: none !important;
+        background: transparent;
+        top: 0 !important;
     }
-    
+    .flatpickr-rContainer{
+        width: 100% !important;
+        display: block !important;
+    }
+    .flatpickr-days {
+        width: 100% !important;
+        border: none !important;
+    }
+
+    .dayContainer {
+        width: 100% !important;
+        min-width: 100% !important;
+        max-width: 100% !important;
+        display: flex !important;
+        justify-content: space-around !important;
+    }
+
+    .flatpickr-months {
+        width: 100% !important;
+    }
+    .flatpickr-month {
+        width: 100% !important;
+    }
+    .flatpickr-weekdays {
+        width: 100% !important;
+    }
+    span.flatpickr-weekday {
+        width: 14.28% !important;
+        background: #f8f9fa;      
+        color: #495057;
+        font-weight: bold;
+    }
+    .flatpickr-day {
+        width: 14.28% !important;
+        max-width: none !important;
+        height: auto !important;
+        aspect-ratio: 1 / 1;
+        line-height: 1 !important;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin: 0 !important;
+        border-radius: 8px !important;
+        border: 1px solid transparent;
+    }
+    .flatpickr-day.selected, .flatpickr-day.today {
+        background: #0d6efd !important;
+        color: #fff !important;
+        border-color: #0d6efd !important;
+    } 
+    .flatpickr-day.startRange, 
+    .flatpickr-day.endRange, 
+    .flatpickr-day.selected.inRange, 
+    .flatpickr-day.startRange.inRange, 
+    .flatpickr-day.endRange.inRange, 
+    .flatpickr-day.selected:focus, 
+    .flatpickr-day.startRange:focus, 
+    .flatpickr-day.endRange:focus, 
+    .flatpickr-day.selected:hover, 
+    .flatpickr-day.startRange:hover, 
+    .flatpickr-day.endRange:hover, 
+    .flatpickr-day.selected.prevMonthDay, 
+    .flatpickr-day.startRange.prevMonthDay, 
+    .flatpickr-day.endRange.prevMonthDay, 
+    .flatpickr-day.selected.nextMonthDay, 
+    .flatpickr-day.startRange.nextMonthDay, 
+    .flatpickr-day.endRange.nextMonthDay {
+        background: #0d6efd !important;
+        border-color: #0d6efd !important;
+    }
     /* 일지 내용 표시 영역 */
     .journal-display-box {
         background-color: #f8f9fa;
@@ -40,7 +112,7 @@
         border-radius: 6px;
         border: 1px solid #e9ecef;
         min-height: 40px;
-        white-space: pre-wrap; /* 줄바꿈 유지 */
+        white-space: pre-wrap;
         color: #333;
     }
 
@@ -48,9 +120,9 @@
     .photo-container img {
         width: 100%;
         max-height: 300px;
-        object-fit: cover;
+        object-fit: contain; /* 사진 비율 유지 */
         border-radius: 8px;
-        background-color: #e9ecef;
+        background-color: #000; /* 빈 공간 검은색 */
         border: 1px solid #dee2e6;
     }
 </style>
@@ -66,7 +138,8 @@
                     <i class="fas fa-calendar-alt me-1 text-primary"></i> 날짜 선택
                 </div>
                 <div class="card-body p-0 d-flex justify-content-center py-3">
-                    <div id="inline-calendar"></div> <input type="hidden" id="selected-date">
+                    <div id="inline-calendar"></div> 
+                    <input type="hidden" id="selected-date">
                 </div>
             </div>
 
@@ -78,8 +151,7 @@
                     <img id="journal-image" src="https://placehold.co/600x400/eee/ccc?text=No+Image" alt="현장 사진">
                     
                     <div class="mt-2 small text-muted">
-                        <span id="photo-timestamp"><i class="far fa-clock"></i> 촬영 시간: -</span>
-                    </div>
+                        </div>
                     <a id="download-btn" href="#" class="btn btn-sm btn-outline-secondary mt-2 w-100" style="display: none;" download>
                         <i class="fas fa-download"></i> 이미지 저장
                     </a>
@@ -99,6 +171,7 @@
                         <input type="time" id="new-cam-time" class="form-control">
                         <button class="btn btn-secondary" type="button" id="btn-save-cam-time">저장</button>
                     </div>
+                    <div class="form-text text-xs mt-1">* 설정한 시간에 매일 자동 촬영됩니다.</div>
                 </div>
             </div>
         </div>
@@ -131,19 +204,19 @@
                         
                         <div class="mb-3">
                             <label class="form-label small fw-bold">1. 농작업 (Work)</label>
-                            <textarea class="form-control" id="input-work" rows="3" placeholder="오늘 한 일을 기록하세요"></textarea>
+                            <textarea class="form-control" id="input-work" rows="3" placeholder="예: 관수 200mL, 잡초 제거"></textarea>
                         </div>
                         <div class="mb-3">
                             <label class="form-label small fw-bold">2. 농약 (Pesticide)</label>
-                            <input type="text" class="form-control" id="input-pesticide" placeholder="사용 품목 및 희석비">
+                            <input type="text" class="form-control" id="input-pesticide" placeholder="사용 품목 및 용량">
                         </div>
                         <div class="mb-3">
                             <label class="form-label small fw-bold">3. 비료 (Fertilizer)</label>
-                            <input type="text" class="form-control" id="input-fertilizer" placeholder="관주/엽면시비 내역">
+                            <input type="text" class="form-control" id="input-fertilizer" placeholder="비료 내역">
                         </div>
                         <div class="mb-3">
                             <label class="form-label small fw-bold">4. 수확 (Harvest)</label>
-                            <input type="text" class="form-control" id="input-harvest" placeholder="수확량 및 특이사항">
+                            <input type="text" class="form-control" id="input-harvest" placeholder="예: 딸기 1kg">
                         </div>
                         <div class="mb-3">
                             <label class="form-label small fw-bold">5. 특이사항 (Notes)</label>
@@ -160,7 +233,8 @@
             </div>
         </div>
 
-    </div> </div>
+    </div> 
+</div>
 
 <div class="position-fixed bottom-0 end-0 p-3" style="z-index: 11">
   <div id="liveToast" class="toast align-items-center text-white bg-success border-0" role="alert" aria-live="assertive" aria-atomic="true">
@@ -176,31 +250,27 @@
 
 {% block extra_js %}
 <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
-<script src="https://cdn.jsdelivr.net/npm/flatpickr/dist/l10n/ko.js"></script> <script>
+<script src="https://cdn.jsdelivr.net/npm/flatpickr/dist/l10n/ko.js"></script> 
+<script>
 document.addEventListener('DOMContentLoaded', () => {
     
-    // CSRF Token 가져오기
     const csrfToken = document.querySelector('input[name="csrfmiddlewaretoken"]')?.value;
 
-    // --- 1. 달력 초기화 (Flatpickr) ---
     const fp = flatpickr("#inline-calendar", {
-        inline: true,             // 달력을 항상 펼쳐놓음
-        locale: "ko",             // 한국어 설정
-        defaultDate: "today",     // 오늘 날짜 기본 선택
+        inline: true,
+        locale: "ko",
+        defaultDate: "today",
         dateFormat: "Y-m-d",
         onChange: function(selectedDates, dateStr, instance) {
-            loadJournalData(dateStr); // 날짜 변경 시 데이터 로드
+            loadJournalData(dateStr);
         }
     });
 
-    // 페이지 로드 시 오늘 날짜 데이터 불러오기
     const todayStr = new Date().toISOString().split('T')[0];
     loadJournalData(todayStr);
 
 
-    // --- 2. 데이터 조회 함수 (GET) ---
     async function loadJournalData(dateStr) {
-        // UI 날짜 업데이트
         document.getElementById('selected-date').value = dateStr;
         document.getElementById('form-date').value = dateStr;
         document.getElementById('display-date-title').textContent = dateStr;
@@ -209,24 +279,18 @@ document.addEventListener('DOMContentLoaded', () => {
             const response = await fetch(`/journal_api/?date=${dateStr}`);
             const result = await response.json();
 
-            // DOM 요소들
             const displayArea = document.getElementById('journal-content-area');
             const imgEl = document.getElementById('journal-image');
             const downloadBtn = document.getElementById('download-btn');
-            const timeEl = document.getElementById('photo-timestamp');
-
-            // === 폼 & 디스플레이 초기화 ===
+            
             document.getElementById('journal-form').reset();
-            document.getElementById('form-date').value = dateStr; // reset후 다시 날짜 설정
+            document.getElementById('form-date').value = dateStr; 
             imgEl.src = "https://placehold.co/600x400/eee/ccc?text=No+Image";
             downloadBtn.style.display = 'none';
-            timeEl.innerHTML = '<i class="far fa-clock"></i> 촬영 시간: -';
 
-
-            if (result.status === 'success' && result.exists) {
+            if (result.status === 'success') {
                 const data = result.data;
 
-                // [중앙] 읽기 전용 영역 채우기
                 displayArea.innerHTML = `
                     <div class="journal-item"><h6>1. 농작업</h6><p>${data.work || '-'}</p></div>
                     <div class="journal-item"><h6>2. 농약</h6><p>${data.pesticide || '-'}</p></div>
@@ -235,117 +299,83 @@ document.addEventListener('DOMContentLoaded', () => {
                     <div class="journal-item"><h6>5. 특이사항</h6><p>${data.notes || '-'}</p></div>
                 `;
 
-                // [우측] 입력 폼 채우기 (수정 모드)
                 document.getElementById('input-work').value = data.work || '';
                 document.getElementById('input-pesticide').value = data.pesticide || '';
                 document.getElementById('input-fertilizer').value = data.fertilizer || '';
                 document.getElementById('input-harvest').value = data.harvest || '';
                 document.getElementById('input-notes').value = data.notes || '';
 
-                // [좌측] 이미지 처리
                 if (data.image_dir) {
-                    imgEl.src = `/static/${data.image_dir}`; // static 경로 가정 (필요시 수정)
-                    downloadBtn.href = imgEl.src;
+                    imgEl.src = data.image_dir; 
+                    downloadBtn.href = data.image_dir;
                     downloadBtn.style.display = 'inline-block';
                 }
-                // [좌측] 촬영 시간
-                if (data.cam_time) {
-                    timeEl.innerHTML = `<i class="far fa-clock"></i> 촬영 시간: ${data.cam_time}`;
-                }
 
-            } else {
-                // 데이터 없음 -> 빈 화면 표시
-                displayArea.innerHTML = `
-                    <div class="text-center text-muted py-5">
-                        <i class="fas fa-folder-open mb-3 fs-3"></i><br>
-                        작성된 일지가 없습니다.<br>우측 폼에서 내용을 입력해 주세요.
-                    </div>
-                `;
-            }
+                if (data.cam_time) {
+                    document.getElementById('current-cam-time').textContent = data.cam_time;
+                }
+            } 
 
         } catch (error) {
             console.error("Error loading journal:", error);
-            alert("일지 데이터를 불러오는 중 오류가 발생했습니다.");
+            alert("일지를 불러오는 중 오류가 발생했습니다.");
         }
     }
 
 
-    // --- 3. 일지 저장 함수 (POST) ---
-    document.getElementById('btn-save-journal').addEventListener('click', async () => {
-        const dateStr = document.getElementById('form-date').value;
-        if (!dateStr) { alert("날짜가 선택되지 않았습니다."); return; }
-
+    document.getElementById('btn-save-journal').addEventListener('click', () => {
         const payload = {
-            date: dateStr,
             work: document.getElementById('input-work').value,
             pesticide: document.getElementById('input-pesticide').value,
             fertilizer: document.getElementById('input-fertilizer').value,
             harvest: document.getElementById('input-harvest').value,
             notes: document.getElementById('input-notes').value
         };
+        sendDataToServer(payload, "일지가 저장되었습니다.");
+    });
+
+
+    document.getElementById('btn-save-cam-time').addEventListener('click', () => {
+        const newTime = document.getElementById('new-cam-time').value;
+        if (!newTime) {
+            alert("시간을 선택해주세요.");
+            return;
+        }
+        const payload = { cam_time: newTime };
+        sendDataToServer(payload, "촬영 시간이 변경되었습니다.");
+    });
+
+
+    async function sendDataToServer(dataObj, successMsg) {
+        const dateStr = document.getElementById('form-date').value;
+        if (!dateStr) { alert("날짜가 선택되지 않았습니다."); return; }
+
+        const finalPayload = { ...dataObj, date: dateStr };
 
         try {
             const response = await fetch('/journal_api/', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
-                    'X-CSRFToken': csrfToken // Django CSRF 토큰 필수
+                    'X-CSRFToken': csrfToken
                 },
-                body: JSON.stringify(payload)
+                body: JSON.stringify(finalPayload)
             });
 
             const result = await response.json();
 
             if (result.status === 'success') {
-                showToast("일지가 성공적으로 저장되었습니다.");
-                loadJournalData(dateStr); // 저장 후 화면 갱신
+                showToast(successMsg);
+                loadJournalData(dateStr);
             } else {
                 alert("저장 실패: " + result.message);
             }
-
         } catch (error) {
             console.error("Save error:", error);
-            alert("저장 중 네트워크 오류가 발생했습니다.");
+            alert("저장 중 오류가 발생했습니다.");
         }
-    });
+    }
 
-
-    // --- 4. 카메라 시간 설정 저장 (별도 API 필요) ---
-    // camera_time_api가 있다는 가정 하에 작성
-    document.getElementById('btn-save-cam-time').addEventListener('click', async () => {
-        const newTime = document.getElementById('new-cam-time').value;
-        if (!newTime) { alert("시간을 입력해주세요."); return; }
-
-        try {
-            // camera_time_api가 구현되어 있다고 가정
-            const response = await fetch('/camera_time_api/', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-CSRFToken': csrfToken
-                },
-                body: JSON.stringify({ capture_time: newTime })
-            });
-            const result = await response.json();
-            
-            if (response.ok) {
-                document.getElementById('current-cam-time').textContent = newTime;
-                showToast("촬영 시간이 변경되었습니다.");
-            } else {
-                alert("설정 실패");
-            }
-        } catch (e) {
-            console.error(e);
-            alert("카메라 시간 설정 API 오류");
-        }
-    });
-
-    // (참고) 초기 촬영 시간 로드 로직도 필요하다면 window.onload 등에 추가
-    // async function loadCameraTime() { ... fetch('/camera_time_api/') ... }
-    // loadCameraTime();
-
-
-    // --- 유틸리티: Toast 알림 표시 ---
     function showToast(msg) {
         const toastEl = document.getElementById('liveToast');
         document.getElementById('toast-message').textContent = msg;
