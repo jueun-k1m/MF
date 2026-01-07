@@ -98,6 +98,12 @@
                     무게 센서 보정
                 </div>
                 <div class="calib-body">
+                    <div class="text-center p-3 mb-3 bg-light rounded border">
+                        <span class="text-muted small">현재 센서 측정값 (Raw)</span>
+                        <h2 class="fw-bold text-primary m-0" id="current-weight">
+                            0
+                        </h2>
+                    </div>
                     <div class="step-box">
                         <span class="step-badge">STEP 1</span>
                         <label class="form-label">첫 번째 무게 (g)</label>
@@ -134,6 +140,12 @@
                     pH 센서 보정
                 </div>
                 <div class="calib-body">
+                    <div class="text-center p-3 mb-3 bg-light rounded border">
+                        <span class="text-muted small">현재 센서 측정값 (Raw)</span>
+                        <h2 class="fw-bold text-primary m-0" id="current-ph">
+                            0
+                        </h2>
+                    </div>
                     <div class="step-box">
                         <span class="step-badge">STEP 1</span>
                         <label class="form-label">첫 번째 용액 (pH 7.0)</label>
@@ -143,7 +155,6 @@
                         </div>
                         <div class="result-text" id="res-ph1"></div>
                     </div>
-
                     <div class="step-box">
                         <span class="step-badge">STEP 2</span>
                         <label class="form-label">두 번째 용액 (pH 4.0)</label>
@@ -170,6 +181,12 @@
                     EC 센서 보정
                 </div>
                 <div class="calib-body">
+                    <div class="text-center p-3 mb-3 bg-light rounded border">
+                        <span class="text-muted small">현재 센서 측정값 (Raw)</span>
+                        <h2 class="fw-bold text-primary m-0" id="current-ec">
+                            0
+                        </h2>
+                    </div>
                     <div class="step-box">
                         <span class="step-badge">STEP 1</span>
                         <label class="form-label">첫 번째 용액 (Low EC)</label>
@@ -236,6 +253,40 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     fetchWaterTemp();
     setInterval(fetchWaterTemp, 5000);
+
+    // --- 실시간 센서 Raw 데이터 가져오기 (무게 등) ---
+    async function fetchLiveSensorData() {
+        try {
+            // GET 방식으로 요청 (옵션 없으면 기본이 GET)
+            const response = await fetch('/calibrate_api/'); 
+            if (response.ok) {
+                const data = await response.json();
+                
+                // 무게 업데이트
+                if (data.current_weight !== undefined) {
+                    const weightVal = parseFloat(data.current_weight); // 숫자 변환
+                    document.getElementById('current-weight').textContent = weightVal;
+                    
+                    // (선택사항) pH나 EC도 보여주고 싶다면 여기서 data.current_raw_ph 등을 쓰면 됩니다.
+                }
+                if (data.current_ph !== undefined) {
+                    const phVal = parseFloat(data.current_ph); // 숫자 변환
+                    document.getElementById('current-ph').textContent = phVal;
+                }
+                if (data.current_ec !== undefined) {
+                    const ecVal = parseFloat(data.current_ec); // 숫자 변환
+                    document.getElementById('current-ec').textContent = ecVal;
+                }
+            }
+        } catch (e) {
+            console.error("센서 데이터 로드 실패:", e);
+        }
+    }
+
+    // 1초마다 실행 (실시간 갱신)
+    fetchLiveSensorData(); // 페이지 로드 시 즉시 1회 실행
+    setInterval(fetchLiveSensorData, 1000);
+
 
     // --- 공통 API 요청 함수 ---
     async function sendCalibration(action, payload = {}) {
