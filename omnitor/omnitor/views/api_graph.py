@@ -3,7 +3,7 @@ import json
 from datetime import timedelta, datetime, time
 from django.http import JsonResponse, HttpResponse
 from django.utils import timezone
-from django.utils.dateparse import parse_date
+from django.utils.dateparse import parse_date, parse_datetime
 from omnitor.models import FinalData
 
 def graph_api(request):
@@ -32,17 +32,37 @@ def graph_api(request):
         try:
             # 사용자가 날짜를 직접 선택한 경우
             if start_date_str and end_date_str:
-                # 문자열을 날짜 객체로 변환
-                start_date = parse_date(start_date_str)
-                end_date = parse_date(end_date_str)
+                
+                # 시간 날짜 둘 다 포함 - parse_datetime 사용
+                start_dt = parse_datetime(start_date_str)
+                end_dt = parse_datetime(end_date_str)
 
-                # 날짜에 시간을 결합
-                start_dt = datetime.combine(start_date, time.min)
-                end_dt = datetime.combine(end_date, time.max)
 
+                # 시간 없고 날짜만 - parse_date 사용
+                if start_dt is None:
+                    start_date = parse_date(start_date_str)
+                    if start_date:
+                        start_dt = datetime.combine(start_date, time.min)
+                
+                if end_dt is None:
+                    end_date = parse_date(end_date_str)
+                    if end_date:
+                        end_dt = datetime.combine(end_date, time.max)
+                
+                # 파싱 실패 (None) 에러 처리
+                if start_dt is None or end_dt is None:
+                     return JsonResponse({'error': '날짜 형식이 올바르지 않습니다.'}, status=400)
+                
                 # Timezone 적용
-                start_time = timezone.make_aware(start_dt)
-                end_time = timezone.make_aware(end_dt)
+                if timezone.is_naive(start_dt):
+                    start_time = timezone.make_aware(start_dt)
+                else:
+                    start_time = start_dt
+
+                if timezone.is_naive(end_dt):
+                    end_time = timezone.make_aware(end_dt)
+                else:
+                    end_time = end_dt
 
             # 선택 버튼을 사용한 경우
             elif time_range:
@@ -75,7 +95,7 @@ def graph_api(request):
         try:
             # DataFrame 생성
             df = pd.DataFrame(data_list)
-            df['timestamp'] = pd.to_datetime(df['timestamp'])
+            df['timestamp'] = pd.to_datetime(df['timestamp'], utc=True)
             df.set_index('timestamp', inplace=True)
 
             unit_to_freq = {
