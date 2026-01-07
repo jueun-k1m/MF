@@ -1,80 +1,52 @@
-import json
-import datetime
-from omnitor.models import CalibrationData, RawData
-from omnitor.services.save_calibrationsettings import calibrate_all
-from omnitor.services.filtering import avg
-from django.http import JsonResponse, HttpResponseBadRequest
+from omnitor.models import CalibrationSettings
 
-def calibrate_api(request):
-
+def calibrate_all(calib_settings):
     """
-    [API] 센서 보정 설정 저장
-    무게 / ph / ec 각각 DB 다음 행에 보정 데이터 저장 및 보정 설정 저장
-    :param request: Description
+    Weight, pH, EC 모든 보정치를 한 번에 계산하고 하나의 레코드에 저장
     """
+    print(f"[save_calib 1] calib_settings: {calib_settings.__dict__}")
 
-    if request.method == 'POST':
-        try:
-            data = json.loads(request.body)
-            action = data.get('action')
-        except json.JSONDecodeError:
-            return JsonResponse({'error': 'Invalid JSON'}, status=400)
+    if not calib_settings:
+        print("[save_calib 2] No Calibration data found for calculation.")
+        return
 
-        obj = CalibrationData.objects.last()
-        raw = RawData.objects.last()
-        if not obj:
-            obj = CalibrationData.objects.create()
+    # 저장할 데이터 딕셔너리 준비
+    defaults = {}
 
-        # ======= WEIGHT =======
-        if action == 'calibrate_weight1':
-            obj.weight_real1 = data.get('weight_real1')
-            obj.weight_filtered1 = avg('weight')
-            obj.save()
-            return JsonResponse({'message': '무게1 저장 완료'})
+    try:
+        # 1. Weight 보정 계산
+        w_slope = (calib_settings.weight_real2 - calib_settings.weight_real1) / (calib_settings.weight_filtered2 - calib_settings.weight_filtered1)
+        w_intercept = calib_settings.weight_real1 - (w_slope * calib_settings.weight_filtered1)
+        defaults.update({'weight_slope': w_slope, 'weight_intercept': w_intercept})
 
-        elif action == 'calibrate_weight2':
-            obj.weight_real2 = data.get('weight_real2')
-            obj.weight_filtered2 = avg('weight')
-            obj.save()
-            return JsonResponse({'message': '무게2 저장 완료'})
+        # 2. pH 보정 계산 (온도 보정 포함)
+        if not (calib_settings.ph_filtered2):
+            # print("[save_calib 3] No ph_filtered2 data found.")
+            defaults.update({'ph_slope': 1.0, 'ph_intercept': 0.0})
+        else:
+            ph_slope = (calib_settings.ph_real2 - calib_settings.ph_real1) / (calib_settings.ph_filtered2 - calib_settings.ph_filtered1)
+            ph_intercept = calib_settings.ph_real1 - (ph_slope * calib_settings.ph_filtered1)
+            defaults.update({'ph_slope': ph_slope, 'ph_intercept': ph_intercept})
 
-        # ======= pH (Fixed temperature field mapping) =======
-        elif action == 'calibrate_ph1':
-            obj.ph_real1 = data.get('ph_real1')
-            obj.ph_filtered1 = avg('water_ph')
-            obj.save()
-            return JsonResponse({'message': 'ph1 저장 완료'})
+        # 3. EC 보정 계산 (온도 보정 포함)
+        if not (calib_settings.ec_filtered2):
+            # print("[save_calib 4] No ec_filtered2 data found.")
+            defaults.update({'ec_slope': 1.0, 'ec_intercept': 0.0})
+        else:
+            ec_slope = (calib_settings.ec_real2 - calib_settings.ec_real1) / (calib_settings.ec_filtered2 - calib_settings.ec_filtered1)
+            ec_intercept = calib_settings.ec_real1 - (ec_slope * calib_settings.ec_filtered1)
+            defaults.update({'ec_slope': ec_slope, 'ec_intercept': ec_intercept})
 
-        elif action == 'calibrate_ph2':
-            obj.ph_real2 = data.get('ph_real2')
-            obj.ph_filtered2 = avg('water_ph')
-            obj.save()
-            return JsonResponse({'message': 'ph2 저장 완료'})
+        # DB 저장 (ID=1인 단일 설정 레코드 업데이트 혹은 생성)
+        if defaults:
+            obj, created = CalibrationSettings.objects.update_or_create(
+                id=1, 
+                defaults=defaults
+            )
+            print(f"[SaveCalSet] All settings saved. Created: {created}")
+            print(f"DEBUG DATA: {defaults}")
+        else:
+            print("[SaveCalSet] No data calculated. Check if filtered values are identical.")
 
-        # ======= EC (Fixed temperature field mapping) =======
-        elif action == 'calibrate_ec1':
-            obj.ec_real1 = data.get('ec_real1')
-            obj.ec_filtered1 = avg('water_ec')
-            obj.save()
-            return JsonResponse({'message': 'ec1 저장 완료'})
-
-        elif action == 'calibrate_ec2':
-            obj.ec_real2 = data.get('ec_real2')
-            obj.ec_filtered2 = avg('water_ec')
-            obj.save()
-            return JsonResponse({'message': 'ec2 저장 완료'})
-
-        # ======= FINAL APPLY ACTIONS =======
-        elif action == 'save_weight_calibration':
-            calibrate_all(obj)
-            return JsonResponse({'message': '무게 보정이 적용되었습니다.'})
-        
-        elif action == 'save_ph_calibration':
-            calibrate_all(obj)
-            return JsonResponse({'message': 'pH 보정이 적용되었습니다.'})
-
-        elif action == 'save_ec_calibration':
-            calibrate_all(obj)
-            return JsonResponse({'message': 'EC 보정이 적용되었습니다.'})
-
-        return JsonResponse({'error': 'Invalid Action'}, status=400)
+    except ZeroDivisionError as e:
+        print(f"[Error] ZeroDivisionError: {e}")
