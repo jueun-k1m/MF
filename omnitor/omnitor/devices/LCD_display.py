@@ -33,10 +33,11 @@ class LCDManager:
                 humid = getattr(data, 'air_humidity', 0)
                 weight = getattr(data, 'weight', 0)
                 irrig = getattr(data, 'total_irrigation', 0)
+                print(f"[LCD] Updating: Temp={temp}, Humid={humid}, Weight={weight}, Irrig={irrig}")
 
                 self.lcd.clear()
                 self.lcd.cursor_pos = (0, 0)
-                self.lcd.write_string(f"{temp:.1f}C  {weight:.1f}g")
+                self.lcd.write_string(f"{temp:.1f}°C  {weight:.1f}g")
                 
                 self.lcd.cursor_pos = (1, 0)
                 self.lcd.write_string(f"{humid:.1f}%  {irrig:.1f}mL")
