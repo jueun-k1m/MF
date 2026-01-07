@@ -19,7 +19,7 @@ def save_rawdata(gpio, soil, water):
     센서 데이터를 읽어 RawData에 저장
     """
 
-    print(f"[rawdata] save_rawdata start {timezone.now()}", flush=True)
+    #print(f"[rawdata] save_rawdata start {timezone.now()}", flush=True)
 
     from omnitor.models import RawData
 
@@ -145,13 +145,13 @@ def save_finaldata():
 
         # 관수량 (급수량) 계산
         current_weight = (cal_settings.weight_slope * (filtered_data.get('weight')) + cal_settings.weight_intercept)
-        print(f"[FinalData] Current Weight: {current_weight}, Previous Weight: {prev_weight}", flush=True)
+        #print(f"[FinalData] Current Weight: {current_weight}, Previous Weight: {prev_weight}", flush=True)
 
         irrigation = 0
         
         if prev_weight > 0 and current_weight > prev_weight + 100:
             irrigation = current_weight - prev_weight
-            print(f"[FinalData] Irrigation Detected: {irrigation} ml", flush=True)
+            #print(f"[FinalData] Irrigation Detected: {irrigation} ml", flush=True)
             
         # 누적 데이터 계산
         agg_result = FinalData.objects.filter(timestamp__gte=today_start).aggregate(
@@ -200,7 +200,8 @@ def save_finaldata():
 
         # print(f"[12] FinalData saved at {now.strftime('%H:%M:%S')} : {final_data}", flush = True)
         prev_weight = current_weight
-        print(f"prev weight: {prev_weight}", flush=True)
+        #print(f"prev weight: {prev_weight}", flush=True)
+        print("[save_data.py] saving Final Data")
 
     except Exception as e:
         print(f"[FinalData Error] {e}")
