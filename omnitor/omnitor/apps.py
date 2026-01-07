@@ -8,10 +8,11 @@ from datetime import datetime
 from .devices.soil import SoilSensorSingleton
 from .devices.water import WaterSensorSingleton
 from .devices.gpio import GPIOSensorSingleton
+from .devices.LCD_display import LCDManager
 
 
 def run_scheduler_loop():
-    print("[Debug] Run Scheduler Loop", flush=True)
+    #print("[Debug] Run Scheduler Loop", flush=True)
     time.sleep(2)  # 초기 대기 시간
 
     while True:
@@ -23,7 +24,7 @@ class OmnitorConfig(AppConfig):
 
     def ready(self):
 
-        print(f"[Debug] OmnitorConfig ready 진입")
+        #print(f"[Debug] OmnitorConfig ready 진입")
               
         if os.environ.get("RUN_MAIN") != "true":
             return
@@ -37,6 +38,8 @@ class OmnitorConfig(AppConfig):
    
         water = WaterSensorSingleton.instance()
         water.start()
+
+        lcd_manager = LCDManager()
 
         def sensor_job():
             # 이 함수는 1초마다 실행됩니다.
@@ -52,7 +55,9 @@ class OmnitorConfig(AppConfig):
             from .services.save_data import save_finaldata
             save_finaldata()
             
-        schedule.every(60).seconds.do(final_data_job)
+        schedule.every().minute.at(":00").do(final_data_job)
+
+        schedule.every().minute.at(":05").do(lcd_manager.update)
 
         def camera_job():
             from .devices.camera import take_photo
