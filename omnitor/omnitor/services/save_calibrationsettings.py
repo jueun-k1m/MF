@@ -1,13 +1,13 @@
-from omnitor.models import CalibrationData, CalibrationSettings
+from omnitor.models import CalibrationSettings
 
-def calibrate_all(calib_data):
+def calibrate_all(calib_settings):
     """
     Weight, pH, EC 모든 보정치를 한 번에 계산하고 하나의 레코드에 저장
     """
-    print(f"[save_calib 1] calib_data: {calib_data.__dict__}")
+    print(f"[save_calib 1] calib_settings: {calib_settings.__dict__}")
 
-    if not calib_data:
-        print("[save_calib 2] No CalibrationData found for calculation.")
+    if not calib_settings:
+        print("[save_calib 2] No Calibration data found for calculation.")
         return
 
     # 저장할 데이터 딕셔너리 준비
@@ -15,21 +15,26 @@ def calibrate_all(calib_data):
 
     try:
         # 1. Weight 보정 계산
-        if calib_data.weight_filtered2 != calib_data.weight_filtered1:
-            w_slope = (calib_data.weight_real2 - calib_data.weight_real1) / (calib_data.weight_filtered2 - calib_data.weight_filtered1)
-            w_intercept = calib_data.weight_real1 - (w_slope * calib_data.weight_filtered1)
-            defaults.update({'weight_slope': w_slope, 'weight_intercept': w_intercept})
+        w_slope = (calib_settings.weight_real2 - calib_settings.weight_real1) / (calib_settings.weight_filtered2 - calib_settings.weight_filtered1)
+        w_intercept = calib_settings.weight_real1 - (w_slope * calib_settings.weight_filtered1)
+        defaults.update({'weight_slope': w_slope, 'weight_intercept': w_intercept})
 
         # 2. pH 보정 계산 (온도 보정 포함)
-        if calib_data.ph_filtered2 != calib_data.ph_filtered1:
-            ph_slope = (calib_data.ph_real2 - calib_data.ph_real1) / (calib_data.ph_filtered2 - calib_data.ph_filtered1)
-            ph_intercept = calib_data.ph_real1 - (ph_slope * calib_data.ph_filtered1)
+        if not (calib_settings.ph_filtered2):
+            # print("[save_calib 3] No ph_filtered2 data found.")
+            defaults.update({'ph_slope': 1.0, 'ph_intercept': 0.0})
+        else:
+            ph_slope = (calib_settings.ph_real2 - calib_settings.ph_real1) / (calib_settings.ph_filtered2 - calib_settings.ph_filtered1)
+            ph_intercept = calib_settings.ph_real1 - (ph_slope * calib_settings.ph_filtered1)
             defaults.update({'ph_slope': ph_slope, 'ph_intercept': ph_intercept})
 
         # 3. EC 보정 계산 (온도 보정 포함)
-        if calib_data.ec_filtered2 != calib_data.ec_filtered1:
-            ec_slope = (calib_data.ec_real2 - calib_data.ec_real1) / (calib_data.ec_filtered2 - calib_data.ec_filtered1)
-            ec_intercept = calib_data.ec_real1 - (ec_slope * calib_data.ec_filtered1)
+        if not (calib_settings.ec_filtered2):
+            # print("[save_calib 4] No ec_filtered2 data found.")
+            defaults.update({'ec_slope': 1.0, 'ec_intercept': 0.0})
+        else:
+            ec_slope = (calib_settings.ec_real2 - calib_settings.ec_real1) / (calib_settings.ec_filtered2 - calib_settings.ec_filtered1)
+            ec_intercept = calib_settings.ec_real1 - (ec_slope * calib_settings.ec_filtered1)
             defaults.update({'ec_slope': ec_slope, 'ec_intercept': ec_intercept})
 
         # DB 저장 (ID=1인 단일 설정 레코드 업데이트 혹은 생성)
