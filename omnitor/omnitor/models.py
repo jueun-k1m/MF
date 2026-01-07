@@ -94,34 +94,16 @@ class CalibrationSettings(models.Model):
     """
 
     # 무게 보정
-    weight_slope = models.FloatField(default=0)
+    weight_slope = models.FloatField(default=1)
     weight_intercept = models.FloatField(default=0)
     
     # pH 보정
-    ph_slope = models.FloatField(default=0)
+    ph_slope = models.FloatField(default=1)
     ph_intercept = models.FloatField(default=0)
 
     # EC 보정
-    ec_slope = models.FloatField(default=0)
+    ec_slope = models.FloatField(default=1)
     ec_intercept = models.FloatField(default=0)
-
-    def save(self, *args, **kwargs):
-        # This forces the ID to always be 1
-        self.id = 1
-        super(CalibrationSettings, self).save(*args, **kwargs)
-
-    @classmethod
-    def load(cls):
-        # Helper method to always get the first row or create it if missing
-        obj, created = cls.objects.get_or_create(id=1)
-        return obj
-
-    def __str__(self):
-        return "Calibration Settings (ID: 1)"
-    
-    
-class CalibrationData(models.Model):
-    timestamp = models.DateTimeField(auto_now_add=True)
 
     weight_real1 = models.FloatField(default=0, null=True, blank=True)
     weight_real2 = models.FloatField(default=0, null=True, blank=True)
@@ -137,3 +119,18 @@ class CalibrationData(models.Model):
     ec_real2 = models.FloatField(default=0, null=True, blank=True)
     ec_filtered1 = models.FloatField(default=0, null=True, blank=True)
     ec_filtered2 = models.FloatField(default=0, null=True, blank=True)
+
+    def save(self, *args, **kwargs):
+        # This forces the ID to always be 1
+        self.id = 1
+        super(CalibrationSettings, self).save(*args, **kwargs)
+
+    @classmethod
+    def load(cls):
+        # Helper method to always get the first row or create it if missing
+        obj, created = cls.objects.get_or_create(id=1)
+        return obj
+
+    def __str__(self):
+        return "Calibration Settings (ID: 1)"
+    
