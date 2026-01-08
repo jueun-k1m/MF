@@ -10,11 +10,11 @@ class LCDManager:
                                auto_linebreaks=True,
                                backlight_enabled=True)
             self.available = True
-            print("[LCD] Initialized successfully.")
+            print("[LCD_display.py] 초기화 성공 !")
         except Exception as e:
             self.lcd = None
             self.available = False
-            print(f"[LCD] Initialization failed: {e}")
+            print(f"[LCD_display.py] 초기화 실패... {e}")
 
     def update(self):
 
@@ -33,7 +33,7 @@ class LCDManager:
                 humid = getattr(data, 'air_humidity', 0)
                 weight = getattr(data, 'weight', 0)
                 irrig = getattr(data, 'total_irrigation', 0)
-                print(f"[LCD] Updating: Temp={temp}, Humid={humid}, Weight={weight}, Irrig={irrig}")
+                # print(f"[LCD_display.py] Updating: Temp={temp}, Humid={humid}, Weight={weight}, Irrig={irrig}")
 
                 self.lcd.clear()
                 self.lcd.cursor_pos = (0, 0)
@@ -43,9 +43,10 @@ class LCDManager:
                 self.lcd.write_string(f"{humid:.1f}%  {irrig:.1f}mL")
             else:
                 self.lcd.clear()
+                self.lcd.cursor_pos = (0, 0)
                 self.lcd.write_string("Waiting for")
                 self.lcd.cursor_pos = (1, 0)
-                self.lcd.write_string("Data...")
+                self.lcd.write_string("data...")
 
         except Exception as e:
-            print(f"[LCD] Update Error: {e}")
+            print(f"[LCD_display.py] Update Error: {e}")
