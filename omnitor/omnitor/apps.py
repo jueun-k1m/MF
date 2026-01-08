@@ -57,7 +57,7 @@ class OmnitorConfig(AppConfig):
             
         schedule.every().minute.at(":00").do(final_data_job)
 
-        schedule.every().minute.at(":05").do(lcd_manager.update)
+        schedule.every(10).seconds.do(lcd_manager.update)
 
         def camera_job():
             " camera.py로 카메라 사진 찍는 함수"
