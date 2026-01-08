@@ -41,17 +41,17 @@ class OmnitorConfig(AppConfig):
 
         lcd_manager = LCDManager()
 
-        def sensor_job():
-            # 이 함수는 1초마다 실행됩니다.
-            # 실행될 때마다 import를 확인하므로 에러가 나지 않습니다.
+        def raw_data_job():
+            " save_data.py에서 로우 데이터 저장하는 함수 "
             from .services.save_data import save_rawdata
             save_rawdata(gpio, soil, water)
 
-        # 위에서 만든 함수를 스케줄러에 등록
-        schedule.every(1).second.do(sensor_job)
+        # 1초마다 raw data 함수 실행
+        schedule.every(1).second.do(raw_data_job)
 
-        # finaldata도 마찬가지 방식으로 처리 가능
+        # finaldata도 마찬가지 방식으로 처리
         def final_data_job():
+            " save_data.py에서 최종 데이터 저장하는 함수 "
             from .services.save_data import save_finaldata
             save_finaldata()
             
@@ -60,6 +60,7 @@ class OmnitorConfig(AppConfig):
         schedule.every().minute.at(":05").do(lcd_manager.update)
 
         def camera_job():
+            " camera.py로 카메라 사진 찍는 함수"
             from .devices.camera import take_photo
             from .models import FarmJournal
             now = datetime.now()
@@ -69,14 +70,16 @@ class OmnitorConfig(AppConfig):
 
             if journal and journal.cam_time:
                 target_time_str = journal.cam_time.strftime("%H:%M") # DB에 저장된 시간
-
-            # 비교: 현재 시간이 설정 시간과 같으면 촬영!
+            else:
+                target_time_str = "09:00" # 기본값
+                
+            # 비교해서 현재 시간이 설정 시간과 같으면 촬영
             if current_time_str == target_time_str:
-               #print(f"[apps.camera_job] 촬영 시간 도달! ({current_time_str})", flush=True)
+               #print(f"[apps.camera_job] 촬영 시간 도달: ({current_time_str})", flush=True)
                 take_photo()
             else:
                 # 디버깅용
-                #print(f"[apps.camera_job] 대기 중... 현재: {current_time_str} / 목표: {target_time_str}", flush=True)
+                #print(f"[apps.camera_job] 대기 중... 현재: {current_time_str} | 목표: {target_time_str}", flush=True)
                 pass
 
         schedule.every(60).seconds.do(camera_job)
