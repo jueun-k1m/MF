@@ -106,6 +106,14 @@ def graph_api(request):
             
             if freq:
                 target_times = pd.date_range(start=start_time, end=end_time, freq=freq)
+
+                # target_times 의 Timezone을 df와 동일하게 맞춤 (최근 범위랑 직접 선택 범위)
+                if target_times.tz is None:
+                    target_times = target_times.tz_localize('UTC')
+                else:
+                    target_times = target_times.tz_convert('UTC')
+
+
                 tolerance_limit = pd.Timedelta(freq) / 2
                 df_resampled = df.reindex(target_times, method='nearest', tolerance=tolerance_limit)
                 df_resampled.dropna(how='all', inplace=True)
