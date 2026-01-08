@@ -66,8 +66,7 @@ class WaterSensor:
             if self.instrument and self.instrument.serial.is_open:
                 return True
 
-
-
+            print(f"[Water] 포트 연결 시도...")
             self.instrument = minimalmodbus.Instrument(self.port, self.slave_address)
             self.instrument.serial.baudrate = self.baudrate
             self.instrument.serial.bytesize = self.bytesize
@@ -75,6 +74,8 @@ class WaterSensor:
             self.instrument.serial.stopbits = self.stopbits
             self.instrument.serial.timeout = self.timeout
             self.instrument.mode = minimalmodbus.MODE_RTU
+            print("[Water] 포트 연결 성공!")
+
             return True
             
         except Exception as e:
