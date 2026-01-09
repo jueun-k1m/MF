@@ -1,6 +1,8 @@
 import json
 from django.http import JsonResponse
 from omnitor.models import FinalData
+from django.utils import timezone
+import pytz
 
 def dashboard_api(request):
     
@@ -18,11 +20,21 @@ def dashboard_api(request):
             # 데이터가 아예 없는 경우 예외 처리
             if latest_data is None:
                 return JsonResponse({'message': '아직 수집된 데이터가 없습니다.'}, status=204)
+            
+            seoul_tz = pytz.timezone('Asia/Seoul')
+            time_str = '-'
 
+            if latest_data.timestamp:
+                if timezone.is_aware(latest_data.timestamp):
+                    local_time = latest_data.timestamp.astimezone(seoul_tz)
+                else:
+                    local_time = pytz.utc.localize(latest_data.timestamp).astimezone(seoul_tz)
+                time_str = local_time.strftime('%Y-%m-%d %H:%M:%S')
+            
             # 이미 FinalData에 save_data에서 업로드함. 정리해서 json response로 반환만 하면 됨
             response_data = {
                 'status' : 'success', # JS 체크용
-                'timestamp': latest_data.timestamp.strftime('%Y-%m-%d %H:%M:%S'),
+                'timestamp': time_str,
 
                 # 환경 데이터
                 'air_temperature': latest_data.air_temperature,
