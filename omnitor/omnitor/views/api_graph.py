@@ -5,6 +5,7 @@ from django.http import JsonResponse, HttpResponse
 from django.utils import timezone
 from django.utils.dateparse import parse_date, parse_datetime
 from omnitor.models import FinalData
+import pytz
 
 def graph_api(request):
     if request.method == 'GET':
@@ -95,7 +96,13 @@ def graph_api(request):
         try:
             # DataFrame 생성
             df = pd.DataFrame(data_list)
-            df['timestamp'] = pd.to_datetime(df['timestamp'], utc=True)
+            df['timestamp'] = pd.to_datetime(df['timestamp'])
+
+            if df['timestamp'].dt.tz is None:
+                df['timestamp'] = df['timestamp'].dt.tz_localize('UTC').dt.tz_convert('Asia/Seoul')
+            else:
+                df['timestamp'] = df['timestamp'].dt.tz_convert('Asia/Seoul')
+
             df.set_index('timestamp', inplace=True)
 
             unit_to_freq = {
@@ -104,14 +111,20 @@ def graph_api(request):
             }
             freq = unit_to_freq.get(time_unit)
             
-            if freq:
-                target_times = pd.date_range(start=start_time, end=end_time, freq=freq)
 
-                # target_times 의 Timezone을 df와 동일하게 맞춤 (최근 범위랑 직접 선택 범위)
+            # 서울 시간으로 변환
+
+            korea_tz = pytz.timezone('Asia/Seoul')
+            start_time_kr = start_time.astimezone(korea_tz)
+            end_time_kr = end_time.astimezone(korea_tz)
+
+            if freq:
+                target_times = pd.date_range(start=start_time_kr, end=end_time_kr, freq=freq)
+
                 if target_times.tz is None:
-                    target_times = target_times.tz_localize('UTC')
+                    target_times = target_times.tz_localize('Asia/Seoul')
                 else:
-                    target_times = target_times.tz_convert('UTC')
+                    target_times = target_times.tz_convert('Asia/Seoul')
 
 
                 tolerance_limit = pd.Timedelta(freq) / 2
